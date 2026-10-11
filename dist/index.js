@@ -1,0 +1,1 @@
+export { a as CommentModeElement, s as LANGUAGES, d as MARK_COLOR, f as NAME, o as OWN, c as STRINGS, t as TAG, n as createCommentMode, r as defineCommentMode, i as elementName, l as format, u as resolveStrings } from "./src-Bau6Dg1k.js";

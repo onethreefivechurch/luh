@@ -1,0 +1,30 @@
+type Child = Node | string | null | undefined | false;
+type Attributes = Record<string, string | number | boolean | null | undefined | EventListener>;
+export declare function h<K extends keyof HTMLElementTagNameMap>(tag: K, attributes?: Attributes, ...children: Child[]): HTMLElementTagNameMap[K];
+export declare function s<K extends keyof SVGElementTagNameMap>(tag: K, attributes?: Attributes, ...children: Child[]): SVGElementTagNameMap[K];
+declare const ICONS: {
+    close: string;
+    camera: string;
+    image: string;
+    pen: string;
+    send: string;
+    up: string;
+    down: string;
+    arrow: string;
+    box: string;
+    text: string;
+    blur: string;
+    crop: string;
+    undo: string;
+    redo: string;
+    trash: string;
+    grip: string;
+};
+export type IconName = keyof typeof ICONS;
+export declare function icon(name: IconName): SVGSVGElement;
+/** Shows an element in the top layer, above any page z-index, where the browser can. */
+export declare function showOnTop(element: HTMLElement): void;
+export declare function hideFromTop(element: HTMLElement): void;
+export declare const apple: () => boolean;
+export declare const finePointer: () => boolean;
+export {};

@@ -1,0 +1,52 @@
+{
+  "name": "@onethreefivechurch/luh",
+  "version": "0.2.0",
+  "description": "Framework-free feedback: write a note or point at an element, capture and annotate images, deliver to your own backend.",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": [
+    "./dist/browser.js"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "demo": "vite --config demo/vite.config.ts",
+    "demo:build": "vite build --config demo/vite.config.ts"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/onethreefivechurch/luh.git"
+  },
+  "devDependencies": {
+    "vite": "8.3.3",
+    "vitest": "5.0.3",
+    "typescript": "6.0.3",
+    "happy-dom": "20.14.5"
+  },
+  "dependencies": {
+    "@medv/finder": "^4.0.2",
+    "modern-screenshot": "4.7.0"
+  }
+}
