@@ -2,7 +2,7 @@
 // the screenshot, and hands every note to the site's one hook.
 import { captureScreen, cropTo, outline } from "./capture";
 import { describe, elementName, hostDialog, pageContext } from "./context";
-import { h, hideFromTop, showOnTop } from "./dom";
+import { h, hideFromTop, icon, showOnTop } from "./dom";
 import { NAME } from "./name";
 import { Picker, typing } from "./picker";
 import { STRINGS, resolveStrings, type Strings } from "./strings";
@@ -20,6 +20,16 @@ import { NoteWindow } from "./window";
 /** Marks the library's own elements: never picked, never in a screenshot. */
 export const OWN = `[data-${NAME}]`;
 
+/** Public detached host for window and editor shadow parts. */
+export const SURFACE_TAG = `${NAME}-surface`;
+function createSurface(): HTMLElement {
+  if (!customElements.get(SURFACE_TAG))
+    customElements.define(SURFACE_TAG, class extends HTMLElement {});
+  const surface = document.createElement(SURFACE_TAG);
+  surface.setAttribute(`data-${NAME}`, "window");
+  return surface;
+}
+
 export class CommentModeElement extends HTMLElement {
   static observedAttributes = ["submit-url", "key", "app-version", "ignore"];
 
@@ -27,7 +37,7 @@ export class CommentModeElement extends HTMLElement {
   private strings: Strings = STRINGS;
   private picker!: Picker;
   private window!: NoteWindow;
-  private windowHost = h("div", { [`data-${NAME}`]: "window" });
+  private windowHost = createSurface();
   private announcer = h("p", { class: "cm-sr", role: "status" });
   private toast = h("p", { class: "cm-toast", popover: "manual", role: "status", hidden: true });
   private ready = false;
@@ -46,6 +56,20 @@ export class CommentModeElement extends HTMLElement {
   private via: "write" | "pick" = "write";
   private watcher: MutationObserver | null = null;
   private toastTimer = 0;
+  private themeQuery: MediaQueryList | null = null;
+  private onThemeChange = () => this.applyTheme();
+
+  /** Detached public shadow host. Style luh-surface::part(...) or assign it a host class. */
+  get surface(): HTMLElement {
+    return this.windowHost;
+  }
+
+  private applyTheme() {
+    const theme = this.settings.theme ?? "auto";
+    const resolved = theme === "auto" ? (this.themeQuery?.matches ? "dark" : "light") : theme;
+    this.setAttribute("data-luh-theme", resolved);
+    this.windowHost.setAttribute("data-luh-theme", resolved);
+  }
 
   addEventListener<K extends keyof CommentModeEventMap>(
     type: K,
@@ -79,6 +103,7 @@ export class CommentModeElement extends HTMLElement {
   /** Sets options; may be called again to change them (words, kinds, hooks). */
   configure(options: CommentModeOptions) {
     this.settings = { ...this.settings, ...options };
+    this.applyTheme();
     this.strings = resolveStrings(
       this.settings.language ?? document.documentElement.lang ?? "en",
       this.settings.languages,
@@ -108,6 +133,9 @@ export class CommentModeElement extends HTMLElement {
       style.textContent = PAGE_CSS;
       document.head.append(style);
     }
+    this.themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    this.themeQuery.addEventListener("change", this.onThemeChange);
+    this.applyTheme();
     this.build();
     document.addEventListener("keydown", this.onKey, { capture: true });
   }
@@ -118,6 +146,8 @@ export class CommentModeElement extends HTMLElement {
       if (this.isConnected) return;
       this.active = false;
       this.window?.close();
+      this.themeQuery?.removeEventListener("change", this.onThemeChange);
+      this.themeQuery = null;
       window.clearTimeout(this.toastTimer);
       hideFromTop(this.toast);
       this.windowHost.remove();
@@ -154,7 +184,21 @@ export class CommentModeElement extends HTMLElement {
     const language = this.settings.language ?? document.documentElement.lang ?? "en";
     windowRoot.host.setAttribute("lang", language);
     this.setAttribute("lang", language);
+    if (this.settings.trigger)
+      root.append(
+        h(
+          "button",
+          {
+            type: "button",
+            class: "cm-button cm-trigger",
+            onclick: (event: Event) => this.open({ from: event }),
+          },
+          icon("pen", this.settings.icons),
+          this.strings.trigger,
+        ),
+      );
     this.window = new NoteWindow(windowRoot, {
+      icons: this.settings.icons,
       strings: this.strings,
       name: this.settings.name ?? "off",
       screenshot: this.settings.screenshot !== false,

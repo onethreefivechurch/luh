@@ -22,3 +22,9 @@ The library follows established embeddable feedback patterns while keeping stora
 - Luh supplies the feedback UI and note payload, not hosted queues, integrations, authentication, session replay or console collection.
 - DOM-rendered screenshots are user-requested and may differ from the browser's pixels. Cross-origin assets and frames have browser limits.
 - Automated API tests verify the package's configuration and delivery contract. Real browser and assistive-technology verification remains part of each host's integration review.
+
+## Host styling references
+
+- [MDN CSS shadow parts](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_shadow_parts) describes styling exposed shadow elements through `::part()`. Luh documents two actual public hosts because a detached shadow root cannot be reached through the main element's parts.
+- [Tailwind functions and directives](https://tailwindcss.com/docs/functions-and-directives) documents `@apply` for consuming utilities within custom CSS rules. Luh's examples put those rules on public parts in the host's global stylesheet.
+- [Nuxt UI's official design-system guidance](https://github.com/nuxt/ui/blob/v4/skills/nuxt-ui/references/guidelines/design-system.md) documents semantic CSS theme variables. The host example maps those variables to Luh tokens while retaining Nuxt UI's own button as the trigger.

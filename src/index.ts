@@ -13,6 +13,7 @@ export type {
   CommentModeOptions,
   CommentModeEventMap,
   NameField,
+  Theme,
   CommentModeState,
   Kind,
   Note,
@@ -46,3 +47,7 @@ export function createCommentMode(options: CommentModeOptions = {}): CommentMode
 export function elementName(element: Element, strings: Partial<Strings> = {}): string {
   return nameOf(element, { ...STRINGS, ...strings });
 }
+
+export { PARTS } from "./parts";
+export type { IconName, IconOverrides } from "./dom";
+export { SURFACE_TAG } from "./element";

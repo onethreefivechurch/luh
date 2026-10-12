@@ -57,7 +57,7 @@
       header h1 {
         flex: 1;
         margin: 0;
-        font-size: 17px;
+        font-size: 24px;
       }
       button {
         font: inherit;
@@ -134,6 +134,32 @@
         flex-wrap: wrap;
         gap: 8px;
       }
+      /* Host design overrides use only documented shadow parts. */
+      luh-surface.host-style::part(window) {
+        border-radius: 4px;
+      }
+      luh-surface.host-style::part(button) {
+        border-radius: 4px;
+        font-weight: 600;
+      }
+      luh-surface.host-style::part(field) {
+        border-radius: 2px;
+      }
+      luh-surface.host-style::part(send) {
+        background: #22543d;
+        border-color: #22543d;
+        color: white;
+      }
+      luh-surface.host-style::part(icon) {
+        width: 18px;
+        height: 18px;
+      }
+      luh-surface.host-style::part(editor) {
+        border-radius: 0;
+      }
+      luh-surface.host-style::part(tool) {
+        border-radius: 4px;
+      }
     </style>
   </head>
   <body>
@@ -142,6 +168,7 @@
       <button id="comment" aria-pressed="false" class="demo-ui">Luh! · C</button>
       <button id="feedback" class="demo-ui">Send feedback</button>
       <button id="theme" class="demo-ui">Dark</button>
+      <button id="skin" class="demo-ui">Host styling</button>
     </header>
     <main>
       <section>

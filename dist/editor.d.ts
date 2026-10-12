@@ -1,3 +1,4 @@
+import { type IconOverrides } from "./dom";
 import { type Strings } from "./strings";
 export type EditorResult = {
     action: "done";
@@ -7,4 +8,4 @@ export type EditorResult = {
 } | {
     action: "remove";
 };
-export declare function openEditor(file: File, strings: Strings, mount: Node, signal?: AbortSignal): Promise<EditorResult>;
+export declare function openEditor(file: File, strings: Strings, mount: Node, signal?: AbortSignal, icons?: IconOverrides): Promise<EditorResult>;

@@ -117,7 +117,13 @@ export function dialogTitle(dialog: Element | null | undefined): string | undefi
 export function hostDialog(from: Element | null | undefined, ignore: string): HTMLElement | null {
   const DIALOG =
     'dialog[open], [role="dialog"][aria-modal="true"], [role="dialog"][data-state="open"]';
-  const own = from?.closest(DIALOG);
+  let origin = from;
+  let own: Element | null = null;
+  while (origin && !own) {
+    own = origin.closest(DIALOG);
+    const root = origin.getRootNode();
+    origin = root instanceof ShadowRoot ? root.host : null;
+  }
   if (own instanceof HTMLElement && !own.closest(ignore)) return own;
   const open = [...document.querySelectorAll<HTMLElement>(DIALOG)].filter(
     (dialog) => !dialog.closest(ignore) && dialog.getClientRects().length > 0,

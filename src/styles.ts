@@ -19,15 +19,25 @@ import { NAME } from "./name";
 //   --${NAME}-shadow      the window's shadow
 export const CSS = String.raw`
 :host, .cm-root {
-  --cm-accent: var(--${NAME}-accent, #2563eb);
-  --cm-on-accent: var(--${NAME}-on-accent, #ffffff);
-  --cm-bg: var(--${NAME}-bg, #ffffff);
-  --cm-raised: var(--${NAME}-raised, #f4f4f5);
-  --cm-fg: var(--${NAME}-fg, #18181b);
-  --cm-muted: var(--${NAME}-muted, #52525b);
-  --cm-border: var(--${NAME}-border, #e4e4e7);
-  --cm-danger: var(--${NAME}-danger, #dc2626);
-  --cm-warning: var(--${NAME}-warning, #a16207);
+  color-scheme: light;
+  --cm-default-accent: #2563eb;
+  --cm-default-on-accent: #ffffff;
+  --cm-default-bg: #ffffff;
+  --cm-default-raised: #f4f4f5;
+  --cm-default-fg: #18181b;
+  --cm-default-muted: #52525b;
+  --cm-default-border: #e4e4e7;
+  --cm-default-danger: #dc2626;
+  --cm-default-warning: #a16207;
+  --cm-accent: var(--${NAME}-accent, var(--cm-default-accent));
+  --cm-on-accent: var(--${NAME}-on-accent, var(--cm-default-on-accent));
+  --cm-bg: var(--${NAME}-bg, var(--cm-default-bg));
+  --cm-raised: var(--${NAME}-raised, var(--cm-default-raised));
+  --cm-fg: var(--${NAME}-fg, var(--cm-default-fg));
+  --cm-muted: var(--${NAME}-muted, var(--cm-default-muted));
+  --cm-border: var(--${NAME}-border, var(--cm-default-border));
+  --cm-danger: var(--${NAME}-danger, var(--cm-default-danger));
+  --cm-warning: var(--${NAME}-warning, var(--cm-default-warning));
   --cm-radius: var(--${NAME}-radius, 12px);
   --cm-font: var(--${NAME}-font, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif);
   --cm-shadow: var(--${NAME}-shadow, 0 12px 32px -8px rgb(0 0 0 / 0.22), 0 2px 6px -1px rgb(0 0 0 / 0.08));
@@ -35,6 +45,19 @@ export const CSS = String.raw`
   cursor: auto;
   font-family: var(--cm-font);
   color: var(--cm-fg);
+}
+/* Public theme defaults never assign --luh tokens: host overrides keep precedence. */
+:host([data-luh-theme="dark"]) {
+  color-scheme: dark;
+  --cm-default-accent: #60a5fa;
+  --cm-default-on-accent: #09090b;
+  --cm-default-bg: #18181b;
+  --cm-default-raised: #27272a;
+  --cm-default-fg: #fafafa;
+  --cm-default-muted: #a1a1aa;
+  --cm-default-border: #52525b;
+  --cm-default-danger: #f87171;
+  --cm-default-warning: #fbbf24;
 }
 @media (pointer: coarse) {
   :host, .cm-root { --cm-control: 44px; }
@@ -180,6 +203,7 @@ button { font: inherit; color: inherit; }
   color: var(--cm-fg);
   font: 16px/24px var(--cm-font);
 }
+input.cm-field { min-height: var(--cm-control); height: var(--cm-control); padding: 6px 10px; }
 .cm-field::placeholder { color: var(--cm-muted); opacity: 1; }
 .cm-field:focus { outline: none; border-color: var(--cm-accent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--cm-accent) 22%, transparent); }
 .cm-images { list-style: none; margin: 0; padding: 0; border: 1px solid var(--cm-border); border-radius: 8px; }

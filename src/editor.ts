@@ -22,7 +22,7 @@ import {
   type Scene,
   type Tool,
 } from "./drawing";
-import { apple, h, icon, s, type IconName } from "./dom";
+import { apple, h, icon as renderIcon, s, type IconName, type IconOverrides } from "./dom";
 import { format, type Strings } from "./strings";
 
 export type EditorResult =
@@ -48,8 +48,10 @@ export function openEditor(
   strings: Strings,
   mount: Node,
   signal?: AbortSignal,
+  icons?: IconOverrides,
 ): Promise<EditorResult> {
   if (signal?.aborted) return Promise.resolve({ action: "cancel" });
+  const icon = (name: IconName) => renderIcon(name, icons);
   return new Promise((resolve) => {
     let finished = false;
     const url = URL.createObjectURL(file);
@@ -77,6 +79,7 @@ export function openEditor(
         {
           type: "button",
           class: "cm-tool",
+          part: `tool-${entry.tool}`,
           title: `${strings[entry.label]} · ${entry.key.toUpperCase()}`,
           "aria-keyshortcuts": entry.key.toUpperCase(),
           onclick: () => choose(entry.tool),
@@ -93,7 +96,7 @@ export function openEditor(
     );
     const doneButton = h(
       "button",
-      { type: "button", class: "cm-button cm-primary", onclick: () => void done() },
+      { type: "button", class: "cm-button cm-primary", part: "done", onclick: () => void done() },
       strings.done,
     );
     const dialog = h(
@@ -121,6 +124,7 @@ export function openEditor(
           {
             type: "button",
             class: "cm-button cm-quiet",
+            part: "editor-remove",
             onclick: () => finish({ action: "remove" }),
           },
           icon("trash"),
@@ -129,7 +133,12 @@ export function openEditor(
         h("span", { class: "cm-spacer" }),
         h(
           "button",
-          { type: "button", class: "cm-button", onclick: () => finish({ action: "cancel" }) },
+          {
+            type: "button",
+            class: "cm-button",
+            part: "editor-cancel",
+            onclick: () => finish({ action: "cancel" }),
+          },
           strings.cancel,
         ),
         doneButton,
@@ -142,6 +151,7 @@ export function openEditor(
         {
           type: "button",
           class: "cm-tool",
+          part: name === "trash" ? "delete-mark" : name,
           title: `${label} · ${keys}`,
           "aria-label": label,
           onclick,

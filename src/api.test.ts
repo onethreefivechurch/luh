@@ -277,3 +277,159 @@ describe("public API", () => {
     expect(mode.active).toBe(true);
   });
 });
+
+describe("host styling API", () => {
+  it("applies light and dark themes immediately across picker and detached window", () => {
+    const mode = createCommentMode({ theme: "dark" });
+    expect(mode.getAttribute("data-luh-theme")).toBe("dark");
+    expect(mode.surface.localName).toBe("luh-surface");
+    expect(mode.surface.getAttribute("data-luh-theme")).toBe("dark");
+    mode.open();
+    write(mode, "Keep this draft");
+    mode.configure({ theme: "light" });
+    expect(mode.surface.getAttribute("data-luh-theme")).toBe("light");
+    expect(panel(mode).querySelector<HTMLTextAreaElement>("textarea")!.value).toBe(
+      "Keep this draft",
+    );
+  });
+
+  it("follows automatic browser theme changes and releases the preference listener", async () => {
+    const query = new EventTarget();
+    let dark = false;
+    Object.defineProperty(query, "matches", { get: () => dark });
+    const add = vi.spyOn(query, "addEventListener");
+    const remove = vi.spyOn(query, "removeEventListener");
+    vi.spyOn(window, "matchMedia").mockReturnValue(query as MediaQueryList);
+    const mode = createCommentMode();
+    expect(mode.surface.getAttribute("data-luh-theme")).toBe("light");
+    dark = true;
+    query.dispatchEvent(new Event("change"));
+    expect(mode.getAttribute("data-luh-theme")).toBe("dark");
+    expect(mode.surface.getAttribute("data-luh-theme")).toBe("dark");
+    mode.configure({ theme: "light" });
+    query.dispatchEvent(new Event("change"));
+    expect(mode.surface.getAttribute("data-luh-theme")).toBe("light");
+    mode.remove();
+    await Promise.resolve();
+    expect(add).toHaveBeenCalledWith("change", expect.any(Function));
+    expect(remove).toHaveBeenCalledWith("change", expect.any(Function));
+  });
+
+  it("offers an optional styleable trigger and keeps host buttons independent", () => {
+    const mode = createCommentMode();
+    expect(mode.shadowRoot!.querySelector('[part~="trigger"]')).toBeNull();
+    mode.configure({ trigger: true });
+    const trigger = mode.shadowRoot!.querySelector<HTMLButtonElement>('[part~="trigger"]')!;
+    expect(trigger.textContent).toContain(STRINGS.trigger);
+    trigger.click();
+    expect(mode.isOpen).toBe(true);
+    mode.close();
+    mode.configure({ allowed: false });
+    mode.shadowRoot!.querySelector<HTMLButtonElement>('[part~="trigger"]')!.click();
+    expect(mode.isOpen).toBe(false);
+  });
+
+  it("exposes documented window, field, action and editor parts on a stable host", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:image");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const mode = createCommentMode({ name: "optional" });
+    mode.open();
+    for (const part of [
+      "window",
+      "header",
+      "title",
+      "form",
+      "body-field",
+      "name-field",
+      "send",
+      "cancel",
+      "screenshot",
+      "add-images",
+      "icon",
+      "close",
+    ])
+      expect(mode.surface.shadowRoot!.querySelector(`[part~="${part}"]`), part).not.toBeNull();
+    const chooser = panel(mode).querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(chooser, "files", {
+      value: [new File(["png"], "example.png", { type: "image/png" })],
+    });
+    chooser.dispatchEvent(new Event("change"));
+    panel(mode).querySelector<HTMLButtonElement>('[part~="draw"]')!.click();
+    for (const part of [
+      "editor",
+      "tools",
+      "tool-arrow",
+      "tool-box",
+      "tool-text",
+      "tool-blur",
+      "tool-crop",
+      "canvas",
+      "done",
+      "undo",
+      "redo",
+      "delete-mark",
+      "editor-cancel",
+    ])
+      expect(mode.surface.shadowRoot!.querySelector(`[part~="${part}"]`), part).not.toBeNull();
+    mode.close();
+    await Promise.resolve();
+  });
+
+  it("keeps the built-in trigger's note inside its containing modal across shadow roots", () => {
+    const dialog = document.createElement("dialog");
+    dialog.setAttribute("open", "");
+    document.body.append(dialog);
+    const mode = createCommentMode({ trigger: true });
+    dialog.append(mode);
+    mode.shadowRoot!.querySelector<HTMLButtonElement>('[part~="trigger"]')!.click();
+    expect(mode.surface.parentElement).toBe(dialog);
+    expect(mode.isOpen).toBe(true);
+  });
+
+  it("exposes visible SVG primitive parts in host icon factories", () => {
+    const icon = () => {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      for (const name of ["image", "polygon", "ellipse", "polyline", "foreignObject"])
+        svg.append(document.createElementNS(svg.namespaceURI!, name));
+      return svg;
+    };
+    const mode = createCommentMode({ trigger: true, icons: { pen: icon } });
+    for (const part of ["image", "polygon", "ellipse", "polyline", "drawing-object"])
+      expect(
+        mode.shadowRoot!.querySelector(`[part~="icon-pen"] [part~="${part}"]`),
+        part,
+      ).not.toBeNull();
+  });
+
+  it("clones host icons per use across trigger, window and drawing tools", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:image");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("data-host-icon", "yes");
+    const factory = vi.fn(() => svg);
+    const mode = createCommentMode({
+      trigger: true,
+      icons: { pen: factory, send: factory, arrow: factory },
+    });
+    expect(mode.shadowRoot!.querySelector('[part~="trigger"] [data-host-icon]')).not.toBe(svg);
+    mode.open();
+    const sendIcon = panel(mode).querySelector('[part~="icon-send"]')!;
+    expect(sendIcon.getAttribute("data-host-icon")).toBe("yes");
+    expect(sendIcon.getAttribute("aria-hidden")).toBe("true");
+    const chooser = panel(mode).querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(chooser, "files", {
+      value: [new File(["png"], "image.png", { type: "image/png" })],
+    });
+    chooser.dispatchEvent(new Event("change"));
+    panel(mode).querySelector<HTMLButtonElement>('[part~="draw"]')!.click();
+    expect(
+      panel(mode)
+        .querySelector('[part~="tool-arrow"] [part~="icon-arrow"]')!
+        .getAttribute("data-host-icon"),
+    ).toBe("yes");
+    expect(svg.isConnected).toBe(false);
+    mode.close();
+    await Promise.resolve();
+  });
+});
