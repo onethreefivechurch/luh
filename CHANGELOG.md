@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+- Comment mode turns off after an accepted send by default. `deactivateOnSubmit: false` retains continuous picking.
+- Pending or refused sends keep the mode and draft. A late acknowledgement does not deactivate a newer draft.
+
 ## 0.3.0
 
 - Light, dark and automatic palettes update across picker, note window and image editor while preserving host CSS tokens.

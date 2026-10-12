@@ -9,13 +9,13 @@ _Luh_ is Newfoundland for “look!”, said while pointing. Made by [135 Main Co
 Luh is not published to npm. The repository is [onethreefivechurch/luh](https://github.com/onethreefivechurch/luh). Node 22.12 or newer is required to build; the browser has no Node dependency.
 
 ```sh
-npm install github:onethreefivechurch/luh#v0.3.0
+npm install github:onethreefivechurch/luh#v0.4.0
 ```
 
 Release tags include compiled JavaScript and declarations, so GitHub installation needs no dependency build scripts. To build from source or make an installable tarball:
 
 ```sh
-git clone --branch v0.3.0 https://github.com/onethreefivechurch/luh.git
+git clone --branch v0.4.0 https://github.com/onethreefivechurch/luh.git
 cd luh
 npm ci
 npm test
@@ -99,6 +99,7 @@ The `browser` entry registers `<luh-notes>`; it does not append a widget. The ma
 | `name` | `'off'` | `'off'`, `'optional'` or `'required'`. Trimmed name reaches the hook as `note.name`; absent names are `null`. |
 | `screenshot` | `true` | Offers page capture. Disabling it still allows uploading images. |
 | `drawing` | `true` | Offers arrows, boxes, text, blur and crop on images. |
+| `deactivateOnSubmit` | `true` | Turns comment mode off after the host accepts a note. `false` keeps picking on. Refusals and pending sends retain the mode and draft. |
 | `elementPicking` | `true` | Enables picking by key, `toggle()` or `open({ element })`. Disabling it retains the ordinary note window. |
 | `language` | Page language | Language of the widget's labels and its `lang` attribute. |
 | `languages` | English | Host locale dictionaries; every key accepts `Partial<Strings>`. |

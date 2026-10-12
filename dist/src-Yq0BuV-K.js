@@ -3,7 +3,7 @@ var e = "luh", t = "#e5484d", n = /* @__PURE__ */ new Map();
 async function r(e, t = () => {}) {
 	let r = document.documentElement;
 	try {
-		let { createContext: a, destroyContext: o, domToBlob: s } = await import("./dist-DhYexWcW.js");
+		let { createContext: a, destroyContext: o, domToBlob: s } = await import("./dist-B3Z-tFLj.js");
 		await document.fonts?.ready;
 		let c = [r], l = 0, u = await a(r, {
 			filter: (e) => {
@@ -110,7 +110,7 @@ function c(e, n, r) {
 	});
 }
 //#endregion
-//#region node_modules/.pnpm/@medv+finder@4.0.2/node_modules/@medv/finder/finder.js
+//#region node_modules/@medv/finder/finder.js
 var l = /* @__PURE__ */ new Set([
 	"role",
 	"name",
@@ -2531,7 +2531,7 @@ var Oe = class extends HTMLElement {
 			...e,
 			context: this.context
 		}, n = this.settings.onSubmit ? await this.settings.onSubmit(t) : await ke(this.settings.submitUrl ?? this.getAttribute("submit-url"), t, this.strings);
-		return n && typeof n == "object" && "error" in n ? n.error || this.strings.failed : (this.context === t.context && this.settings.thanks !== !1 && this.say(this.strings.sent), this.dispatchEvent(new CustomEvent("sent", { detail: t })), null);
+		return n && typeof n == "object" && "error" in n ? n.error || this.strings.failed : (this.context === t.context && this.settings.deactivateOnSubmit !== !1 && (this.active = !1), this.context === t.context && this.settings.thanks !== !1 && this.say(this.strings.sent), this.dispatchEvent(new CustomEvent("sent", { detail: t })), null);
 	}
 	onKey = (e) => {
 		if (!this.allowed) {
@@ -2602,4 +2602,4 @@ function Ne(e, t = {}) {
 //#endregion
 export { Oe as a, ne as c, O as d, A as f, Ne as i, k as l, e as m, Me as n, Te as o, t as p, je as r, Ee as s, Ae as t, D as u };
 
-//# sourceMappingURL=src-C-y9wrih.js.map
+//# sourceMappingURL=src-Yq0BuV-K.js.map
