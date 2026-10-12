@@ -77,6 +77,67 @@ describe("public API", () => {
     expect(mode.isOpen).toBe(false);
   });
 
+  it("turns picking off after an accepted note by default", async () => {
+    const mode = createCommentMode({ onSubmit: vi.fn(), thanks: false });
+    const element = document.createElement("button");
+    element.textContent = "Save";
+    document.body.append(element);
+    mode.active = true;
+    mode.open({ element });
+    write(mode);
+    const atSent = vi.fn(() => expect(mode.active).toBe(false));
+    mode.addEventListener("sent", atSent);
+    await send(mode);
+    expect(atSent).toHaveBeenCalledOnce();
+    expect(mode.state).toEqual({ active: false, open: false, capturing: false });
+  });
+
+  it("allows a host to keep picking on after sending", async () => {
+    const mode = createCommentMode({ onSubmit: vi.fn(), deactivateOnSubmit: false });
+    mode.active = true;
+    mode.open();
+    write(mode);
+    await send(mode);
+    expect(mode.active).toBe(true);
+    expect(mode.isOpen).toBe(false);
+  });
+
+  it("keeps picking and the draft until the host accepts", async () => {
+    let accept!: () => void;
+    const onSubmit = vi.fn().mockResolvedValueOnce({ error: "Try again" })
+      .mockImplementationOnce(() => new Promise<void>((resolve) => { accept = resolve; }));
+    const mode = createCommentMode({ onSubmit });
+    mode.active = true;
+    mode.open();
+    write(mode);
+    await send(mode);
+    expect(mode.active).toBe(true);
+    expect(mode.isOpen).toBe(true);
+    await send(mode);
+    expect(mode.active).toBe(true);
+    accept();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mode.active).toBe(false);
+    expect(mode.isOpen).toBe(false);
+  });
+
+  it("does not turn off a newer draft when an earlier send finishes", async () => {
+    let accept!: () => void;
+    const mode = createCommentMode({ onSubmit: () => new Promise<void>((resolve) => { accept = resolve; }) });
+    mode.active = true;
+    mode.open();
+    write(mode, "Earlier note");
+    await send(mode);
+    mode.close();
+    mode.open();
+    write(mode, "New note");
+    accept();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mode.active).toBe(true);
+    expect(mode.isOpen).toBe(true);
+    expect(panel(mode).querySelector<HTMLTextAreaElement>("textarea")!.value).toBe("New note");
+  });
+
   it("supports disabled, optional and required names", async () => {
     const onSubmit = vi.fn();
     const mode = createCommentMode({ onSubmit, name: "required" });

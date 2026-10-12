@@ -402,6 +402,8 @@ export class CommentModeElement extends HTMLElement {
       : await post(this.settings.submitUrl ?? this.getAttribute("submit-url"), note, this.strings);
     if (result && typeof result === "object" && "error" in result)
       return result.error || this.strings.failed;
+    if (this.context === note.context && this.settings.deactivateOnSubmit !== false)
+      this.active = false;
     if (this.context === note.context && this.settings.thanks !== false)
       this.say(this.strings.sent);
     this.dispatchEvent(new CustomEvent<Note>("sent", { detail: note }));
