@@ -1,3 +1,4 @@
+import { exposeParts } from "./parts";
 // A small element builder: the library has no framework, and its few screens
 // are built once and updated in place.
 type Child = Node | string | null | undefined | false;
@@ -11,6 +12,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   const element = document.createElement(tag);
   apply(element, attributes);
   append(element, children);
+  exposeParts(element);
   return element;
 }
 
@@ -23,6 +25,7 @@ export function s<K extends keyof SVGElementTagNameMap>(
   const element = document.createElementNS(SVG, tag);
   apply(element, attributes);
   append(element, children);
+  exposeParts(element);
   return element;
 }
 
@@ -62,21 +65,35 @@ const ICONS = {
 };
 export type IconName = keyof typeof ICONS;
 
-export function icon(name: IconName): SVGSVGElement {
-  return s(
-    "svg",
-    {
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      "stroke-width": 2,
-      "stroke-linecap": "round",
-      "stroke-linejoin": "round",
-      "aria-hidden": "true",
-      class: "cm-icon",
-    },
-    s("path", { d: ICONS[name] }),
-  );
+/** Host factories supply trusted, passive SVG nodes. Returned nodes are cloned per use. */
+export type IconOverrides = Partial<Record<IconName, () => SVGSVGElement>>;
+
+export function icon(name: IconName, overrides?: IconOverrides): SVGSVGElement {
+  const supplied = overrides?.[name]?.();
+  if (supplied && (supplied.namespaceURI !== SVG || supplied.localName !== "svg"))
+    throw new TypeError(`Luh icon "${name}" must be an SVG root element`);
+  const rendered = supplied
+    ? (supplied.cloneNode(true) as SVGSVGElement)
+    : s(
+        "svg",
+        {
+          viewBox: "0 0 24 24",
+          fill: "none",
+          stroke: "currentColor",
+          "stroke-width": 2,
+          "stroke-linecap": "round",
+          "stroke-linejoin": "round",
+          "aria-hidden": "true",
+          class: "cm-icon",
+        },
+        s("path", { d: ICONS[name] }),
+      );
+  rendered.classList.add("cm-icon");
+  rendered.setAttribute("aria-hidden", "true");
+  rendered.setAttribute("focusable", "false");
+  rendered.setAttribute("part", `icon icon-${name}`);
+  rendered.querySelectorAll("*").forEach(exposeParts);
+  return rendered;
 }
 
 /** Shows an element in the top layer, above any page z-index, where the browser can. */

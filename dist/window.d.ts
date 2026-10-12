@@ -1,8 +1,10 @@
 import { type Strings } from "./strings";
+import type { IconOverrides } from "./dom";
 import type { Kind, NameField, Via } from "./types";
 export declare const IMAGE_TYPES: string[];
 export interface WindowCallbacks {
     strings: Strings;
+    icons?: IconOverrides;
     name: NameField;
     screenshot: boolean;
     drawing: boolean;
@@ -93,6 +95,7 @@ export declare class NoteWindow {
     private dropZone;
     constructor(root: ShadowRoot, host: WindowCallbacks);
     get isOpen(): boolean;
+    private icon;
     private toolButton;
     open(options: {
         via: Via;

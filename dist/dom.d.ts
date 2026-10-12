@@ -21,7 +21,9 @@ declare const ICONS: {
     grip: string;
 };
 export type IconName = keyof typeof ICONS;
-export declare function icon(name: IconName): SVGSVGElement;
+/** Host factories supply trusted, passive SVG nodes. Returned nodes are cloned per use. */
+export type IconOverrides = Partial<Record<IconName, () => SVGSVGElement>>;
+export declare function icon(name: IconName, overrides?: IconOverrides): SVGSVGElement;
 /** Shows an element in the top layer, above any page z-index, where the browser can. */
 export declare function showOnTop(element: HTMLElement): void;
 export declare function hideFromTop(element: HTMLElement): void;

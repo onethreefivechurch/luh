@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+- Light, dark and automatic palettes update across picker, note window and image editor while preserving host CSS tokens.
+- Stable shadow parts and the public detached `luh-surface` host support host-owned control and layout styles.
+- Typed SVG factories replace icons across the optional trigger, note window and drawing tools.
+- An optional styleable trigger opens ordinary feedback; existing host buttons remain independent.
+- Styling examples cover plain websites, Tailwind and Nuxt UI, with verified browser part styling.
+- Attribution names 135 Main Community Church in Springdale, Newfoundland.
+
 ## 0.2.0
 
 - Standalone package builds ESM JavaScript, declaration types and a browser registration entry.

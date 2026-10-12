@@ -3,14 +3,16 @@
 // drawing and screenshot choice either way. Pictures come from Screenshot
 // this page, a paste, a drop anywhere on the screen, or the file chooser.
 import { openEditor } from "./editor";
-import { apple, finePointer, h, icon, showOnTop, hideFromTop } from "./dom";
+import { apple, finePointer, h, icon as renderIcon, showOnTop, hideFromTop } from "./dom";
 import { format, type Strings } from "./strings";
+import type { IconName, IconOverrides } from "./dom";
 import type { Kind, NameField, Via } from "./types";
 
 export const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export interface WindowCallbacks {
   strings: Strings;
+  icons?: IconOverrides;
   name: NameField;
   screenshot: boolean;
   drawing: boolean;
@@ -96,6 +98,7 @@ export class NoteWindow {
     this.kind = host.kinds[0]?.value ?? null;
     this.nameField = h("input", {
       type: "text",
+      part: "name-field",
       class: "cm-field",
       autocomplete: "name",
       maxlength: 200,
@@ -117,7 +120,7 @@ export class NoteWindow {
         role: "group",
         "aria-label": strings.moveWindow,
       },
-      icon("grip"),
+      this.icon("grip"),
     );
     this.kindRow = h("div", {
       class: "cm-kinds",
@@ -126,6 +129,7 @@ export class NoteWindow {
     });
     this.field = h("textarea", {
       class: "cm-field",
+      part: "body-field",
       rows: 3,
       maxlength: 5000,
       "aria-labelledby": this.titleId,
@@ -143,14 +147,24 @@ export class NoteWindow {
     });
     this.screenshotButton = h(
       "button",
-      { type: "button", class: "cm-button", onclick: () => void this.screenshot() },
-      icon("camera"),
+      {
+        type: "button",
+        class: "cm-button",
+        part: "screenshot",
+        onclick: () => void this.screenshot(),
+      },
+      this.icon("camera"),
       h("span", {}, strings.screenshot),
     );
     this.addButton = h(
       "button",
-      { type: "button", class: "cm-button", onclick: () => this.chooser.click() },
-      icon("image"),
+      {
+        type: "button",
+        class: "cm-button",
+        part: "add-images",
+        onclick: () => this.chooser.click(),
+      },
+      this.icon("image"),
       h("span", {}, strings.addImages),
     );
     this.chooser = h("input", {
@@ -170,9 +184,10 @@ export class NoteWindow {
       {
         type: "button",
         class: "cm-button cm-primary",
+        part: "send",
         "aria-keyshortcuts": apple() ? "Meta+Enter" : "Control+Enter",
       },
-      icon("send"),
+      this.icon("send"),
       h("span", {}, strings.send),
       finePointer() ? h("kbd", { class: "cm-kbd" }, keys) : null,
     );
@@ -184,7 +199,12 @@ export class NoteWindow {
         : h("span", { class: "cm-spacer" }),
       h(
         "button",
-        { type: "button", class: "cm-button cm-quiet", onclick: () => this.requestClose() },
+        {
+          type: "button",
+          class: "cm-button cm-quiet",
+          part: "cancel",
+          onclick: () => this.requestClose(),
+        },
         strings.cancel,
       ),
       this.sendButton,
@@ -200,12 +220,22 @@ export class NoteWindow {
       h("p", { class: "cm-confirm-text" }, strings.discardTitle),
       h(
         "button",
-        { type: "button", class: "cm-button", onclick: () => this.keepEditing() },
+        {
+          type: "button",
+          class: "cm-button",
+          part: "keep-editing",
+          onclick: () => this.keepEditing(),
+        },
         strings.keepEditing,
       ),
       h(
         "button",
-        { type: "button", class: "cm-button cm-danger", onclick: () => this.close() },
+        {
+          type: "button",
+          class: "cm-button cm-danger",
+          part: "discard",
+          onclick: () => this.close(),
+        },
         strings.discard,
       ),
     );
@@ -271,6 +301,10 @@ export class NoteWindow {
     return !this.panel.hidden;
   }
 
+  private icon(name: IconName) {
+    return renderIcon(name, this.host.icons);
+  }
+
   private toolButton(
     name: "up" | "down" | "close",
     label: string,
@@ -279,8 +313,15 @@ export class NoteWindow {
   ) {
     const button = h(
       "button",
-      { type: "button", class: "cm-icon-button", "aria-label": label, title: hint, onclick },
-      icon(name),
+      {
+        type: "button",
+        class: "cm-icon-button",
+        part: name === "up" ? "wider" : name === "down" ? "narrower" : "close",
+        "aria-label": label,
+        title: hint,
+        onclick,
+      },
+      this.icon(name),
     );
     button.addEventListener("pointerdown", (event) => event.stopPropagation());
     return button;
@@ -487,11 +528,12 @@ export class NoteWindow {
             {
               type: "button",
               class: "cm-button cm-quiet",
+              part: "draw",
               "aria-label": format(strings.drawOn, { name }),
               disabled: this.sending,
               onclick: draw,
             },
-            icon("pen"),
+            this.icon("pen"),
             h("span", {}, strings.draw),
           )
         : null,
@@ -500,6 +542,7 @@ export class NoteWindow {
         {
           type: "button",
           class: "cm-icon-button",
+          part: "remove-image",
           "aria-label": format(strings.removeNamed, { name }),
           title: format(strings.removeNamed, { name }),
           disabled: this.sending,
@@ -509,7 +552,7 @@ export class NoteWindow {
             this.addButton.focus();
           },
         },
-        icon("close"),
+        this.icon("close"),
       ),
     );
   }
@@ -584,7 +627,13 @@ export class NoteWindow {
     this.drawing = true;
     const controller = new AbortController();
     this.editorController = controller;
-    const result = await openEditor(picture.file, this.host.strings, this.root, controller.signal);
+    const result = await openEditor(
+      picture.file,
+      this.host.strings,
+      this.root,
+      controller.signal,
+      this.host.icons,
+    );
     if (opening !== this.opening || !this.isOpen) return;
     this.editorController = null;
     this.drawing = false;

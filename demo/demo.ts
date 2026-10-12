@@ -4,6 +4,7 @@ const sent = document.getElementById("sent")!;
 const toggle = document.getElementById("comment")!;
 toggle.textContent = `${STRINGS.trigger} · C`;
 const mode = createCommentMode({
+  theme: "light",
   name: "optional",
   kinds: [
     { value: "bug", label: "Bug", prompt: "What's wrong?" },
@@ -33,5 +34,13 @@ const theme = document.getElementById("theme")!;
 theme.addEventListener("click", () => {
   const dark = document.documentElement.dataset.theme !== "dark";
   document.documentElement.dataset.theme = dark ? "dark" : "light";
+  mode.configure({ theme: dark ? "dark" : "light" });
   theme.textContent = dark ? "Light" : "Dark";
+});
+
+const skin = document.getElementById("skin")!;
+skin.addEventListener("click", () => {
+  const styled = mode.classList.toggle("host-style");
+  mode.surface.classList.toggle("host-style", styled);
+  skin.textContent = styled ? "Default styling" : "Host styling";
 });

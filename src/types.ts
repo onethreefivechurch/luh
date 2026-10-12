@@ -1,3 +1,4 @@
+import type { IconOverrides } from "./dom";
 import type { Strings } from "./strings";
 
 /** How the note began: writing straight away, or picking a spot first. */
@@ -68,7 +69,15 @@ export interface SubmitRefusal {
 
 export type NameField = "off" | "optional" | "required";
 
+export type Theme = "auto" | "light" | "dark";
+
 export interface CommentModeOptions {
+  /** Widget palette. Auto follows prefers-color-scheme; host CSS tokens always override colors. */
+  theme?: Theme;
+  /** Passive SVG factories keyed by icon name. Trusted host code only; nodes are cloned per use. */
+  icons?: IconOverrides;
+  /** Optional in-flow button opening the ordinary note window. Default false. */
+  trigger?: boolean;
   /** Host permission, checked on activation, opening and sending. Default true. */
   allowed?: boolean | (() => boolean);
   /** Author name field. Default "off". */

@@ -1,6 +1,8 @@
 import type { CommentModeEventMap, CommentModeOptions, CommentModeState, OpenOptions } from "./types";
 /** Marks the library's own elements: never picked, never in a screenshot. */
 export declare const OWN = "[data-luh]";
+/** Public detached host for window and editor shadow parts. */
+export declare const SURFACE_TAG = "luh-surface";
 export declare class CommentModeElement extends HTMLElement {
     static observedAttributes: string[];
     private settings;
@@ -22,6 +24,11 @@ export declare class CommentModeElement extends HTMLElement {
     private via;
     private watcher;
     private toastTimer;
+    private themeQuery;
+    private onThemeChange;
+    /** Detached public shadow host. Style luh-surface::part(...) or assign it a host class. */
+    get surface(): HTMLElement;
+    private applyTheme;
     addEventListener<K extends keyof CommentModeEventMap>(type: K, listener: (this: CommentModeElement, event: CommentModeEventMap[K]) => void, options?: boolean | AddEventListenerOptions): void;
     addEventListener(type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | AddEventListenerOptions): void;
     /** Current host permission. Callback failures fail closed. */
