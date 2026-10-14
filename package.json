@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "@medv/finder": "^4.0.2",
+    "@uppy/core": "^6.2.0",
     "modern-screenshot": "4.7.0"
   }
 }

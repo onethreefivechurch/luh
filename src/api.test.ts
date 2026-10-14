@@ -72,6 +72,7 @@ describe("public API", () => {
         screenshot: null,
         images: [],
       }),
+      expect.objectContaining({ onProgress: expect.any(Function) }),
     );
     expect(events).toEqual(["open", "sent", "close"]);
     expect(mode.isOpen).toBe(false);

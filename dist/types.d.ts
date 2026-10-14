@@ -64,6 +64,10 @@ export interface Note {
 export interface SubmitRefusal {
     error: string;
 }
+/** Actual host transport progress, from 0 to 100; optional for existing delivery hooks. */
+export interface SubmitProgress {
+    onProgress(percent: number): void;
+}
 export type NameField = "off" | "optional" | "required";
 export type Theme = "auto" | "light" | "dark";
 export interface CommentModeOptions {
@@ -90,7 +94,7 @@ export interface CommentModeOptions {
     /** Host language dictionaries, merged over English. Exact locale, then base locale. */
     languages?: Record<string, Partial<Strings>>;
     /** Receives each note. Resolve to send; return `{ error }` or throw to keep the window open. */
-    onSubmit?: (note: Note) => Promise<void | SubmitRefusal> | void | SubmitRefusal;
+    onSubmit?: (note: Note, progress: SubmitProgress) => Promise<void | SubmitRefusal> | void | SubmitRefusal;
     /** Or: where to POST each note as multipart form data (see README). */
     submitUrl?: string;
     /** Kinds to choose from. None hides the choice. */

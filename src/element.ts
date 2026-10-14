@@ -14,6 +14,7 @@ import type {
   Note,
   NoteContext,
   OpenOptions,
+  SubmitProgress,
 } from "./types";
 import { NoteWindow } from "./window";
 
@@ -146,6 +147,7 @@ export class CommentModeElement extends HTMLElement {
       if (this.isConnected) return;
       this.active = false;
       this.window?.close();
+      this.window?.dispose();
       this.themeQuery?.removeEventListener("change", this.onThemeChange);
       this.themeQuery = null;
       window.clearTimeout(this.toastTimer);
@@ -172,6 +174,7 @@ export class CommentModeElement extends HTMLElement {
   // (Re)builds the picker and window with the current words and options.
   private build() {
     this.stale = false;
+    this.window?.dispose();
     const wasActive = this.picker?.active ?? false;
     if (this.picker) this.picker.active = false;
     const { root, windowRoot } = this.shadow();
@@ -213,7 +216,7 @@ export class CommentModeElement extends HTMLElement {
       widen: (delta) => this.widen(delta),
       widenState: () => ({ wider: this.step < this.lineage.length - 1, narrower: this.step > 0 }),
       pickedText: () => this.context?.element?.text ?? "",
-      send: (parts) => this.send(parts),
+      send: (parts, progress) => this.send(parts, progress),
       closed: () => this.closed(),
       opener: () =>
         this.returnFocus?.isConnected ? this.returnFocus.getBoundingClientRect() : null,
@@ -393,12 +396,12 @@ export class CommentModeElement extends HTMLElement {
     kind: string | null;
     screenshot: File | null;
     images: File[];
-  }) {
+  }, progress: SubmitProgress) {
     if (!this.allowed) return this.strings.notAllowed;
     if (!this.context) return this.strings.failed;
     const note: Note = { via: this.via, ...parts, context: this.context };
     const result = this.settings.onSubmit
-      ? await this.settings.onSubmit(note)
+      ? await this.settings.onSubmit(note, progress)
       : await post(this.settings.submitUrl ?? this.getAttribute("submit-url"), note, this.strings);
     if (result && typeof result === "object" && "error" in result)
       return result.error || this.strings.failed;

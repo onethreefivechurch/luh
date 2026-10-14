@@ -236,6 +236,7 @@ input.cm-field { min-height: var(--cm-control); height: var(--cm-control); paddi
 .cm-button.cm-danger { background: var(--cm-danger); border-color: var(--cm-danger); color: #fff; }
 .cm-button[aria-busy="true"] { cursor: progress; }
 .cm-kbd { font: 500 12px/16px var(--cm-font); opacity: 0.75; margin-inline-start: 2px; }
+.cm-window progress { width: 100%; accent-color: var(--cm-accent); }
 .cm-small { margin: -6px 0 0; color: var(--cm-muted); font-size: 13px; line-height: 18px; }
 .cm-warning { margin: 0; color: var(--cm-warning); }
 .cm-error { margin: 0; color: var(--cm-danger); }

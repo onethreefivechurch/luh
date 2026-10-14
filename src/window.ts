@@ -2,11 +2,12 @@
 // a pick opens it beside the thing picked. Same words box, kinds, pictures,
 // drawing and screenshot choice either way. Pictures come from Screenshot
 // this page, a paste, a drop anywhere on the screen, or the file chooser.
+import Uppy from "@uppy/core";
 import { openEditor } from "./editor";
 import { apple, finePointer, h, icon as renderIcon, showOnTop, hideFromTop } from "./dom";
 import { format, type Strings } from "./strings";
 import type { IconName, IconOverrides } from "./dom";
-import type { Kind, NameField, Via } from "./types";
+import type { Kind, NameField, Via, SubmitProgress } from "./types";
 
 export const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
@@ -36,7 +37,7 @@ export interface WindowCallbacks {
     kind: string | null;
     screenshot: File | null;
     images: File[];
-  }): Promise<string | null>;
+  }, progress: SubmitProgress): Promise<string | null>;
   closed(): void;
   /** Where the pick is now, to sit beside it; null for no pick. */
   anchor(): DOMRect | null;
@@ -45,15 +46,18 @@ export interface WindowCallbacks {
 }
 
 // `drawn`: the person drew on it, so it is never swapped for a fresh one.
-type Picture = { id: number; file: File; url: string; taken?: "page" | "element"; drawn?: boolean };
+type PictureMeta = { [key: string]: unknown; url: string; taken?: "page" | "element"; drawn?: boolean };
+type Picture = PictureMeta & { id: string; file: File };
 
 export class NoteWindow {
   readonly panel: HTMLElement;
   private body = "";
   private nameField: HTMLInputElement;
   private kind: string | null;
-  private pictures: Picture[] = [];
+  private readonly queue: Uppy<PictureMeta, Record<string, never>>;
   private nextId = 1;
+  private uploadPercent: number | null = null;
+  private uploadProgress = h("progress", { max: 100, hidden: true, part: "upload-progress" });
   private sending = false;
   private capturing = false;
   private percent = 0;
@@ -69,6 +73,7 @@ export class NoteWindow {
   private via: Via = "write";
   private position = { x: 16, y: 16 };
   private dragging = 0;
+  private openingDialogs = new Set<Element>();
   private cleanups: (() => void)[] = [];
   private readonly titleId = `cm-title-${Math.random().toString(36).slice(2)}`;
   // Parts updated in place.
@@ -95,6 +100,15 @@ export class NoteWindow {
     private readonly host: WindowCallbacks,
   ) {
     const { strings } = host;
+    this.queue = new Uppy({
+      autoProceed: false,
+      onBeforeFileAdded: (file) => ({ ...file, id: `${file.id}-${this.nextId++}` }),
+      restrictions: {
+        maxNumberOfFiles: host.maxImages,
+        maxFileSize: host.maxImageBytes,
+        allowedFileTypes: IMAGE_TYPES,
+      },
+    });
     this.kind = host.kinds[0]?.value ?? null;
     this.nameField = h("input", {
       type: "text",
@@ -261,6 +275,7 @@ export class NoteWindow {
       this.note,
       this.problemLine,
       this.progressLine,
+      this.uploadProgress,
       this.chooser,
     );
     this.sendButton.addEventListener("click", () => void this.submit());
@@ -301,6 +316,12 @@ export class NoteWindow {
     return !this.panel.hidden;
   }
 
+  private get pictures(): Picture[] {
+    const order = (picture: Picture) => picture.taken === "page" ? 0 : picture.taken === "element" ? 1 : 2;
+    return this.queue.getFiles().map((file) => ({ ...file.meta, id: file.id, file: file.data as File }))
+      .sort((a, b) => order(a) - order(b));
+  }
+
   private icon(name: IconName) {
     return renderIcon(name, this.host.icons);
   }
@@ -330,6 +351,7 @@ export class NoteWindow {
   open(options: { via: Via; name?: string; selectedText?: string; pickedText?: string }) {
     const { strings } = this.host;
     this.opening++;
+    this.openingDialogs = new Set(this.visibleDialogs());
     this.via = options.via;
     this.title.textContent = options.via === "pick" && options.name ? options.name : strings.title;
     this.selectedText = options.selectedText ?? "";
@@ -359,12 +381,13 @@ export class NoteWindow {
     this.editorController = null;
     this.drawing = false;
     this.sending = false;
+    this.uploadPercent = null;
     this.body = "";
     this.field.value = "";
     this.nameField.value = "";
     this.kind = this.host.kinds[0]?.value ?? null;
     this.pictures.forEach((picture) => URL.revokeObjectURL(picture.url));
-    this.pictures = [];
+    this.queue.clear();
     this.confirming = false;
     this.capturing = false;
     hideFromTop(this.panel);
@@ -412,9 +435,10 @@ export class NoteWindow {
     for (const taken of ["page", "element"] as const) {
       const old = this.pictures.find((picture) => picture.taken === taken);
       if (old?.drawn) continue;
-      if (old) this.remove(old.id);
       const file = fresh[taken];
-      if (file) this.add(file, taken);
+      if (old && file) this.replace(old, file, false);
+      else if (old) this.remove(old.id);
+      else if (file) this.add(file, taken);
     }
     this.refresh();
   }
@@ -497,6 +521,15 @@ export class NoteWindow {
       ? strings.sending
       : strings.send;
     this.sendButton.setAttribute("aria-busy", String(this.sending));
+    this.uploadProgress.hidden = !this.sending;
+    this.uploadProgress.setAttribute("aria-label", strings.sending);
+    if (this.uploadPercent === null) this.uploadProgress.removeAttribute("value");
+    else this.uploadProgress.value = this.uploadPercent;
+    if (this.sending) {
+      const status = this.uploadPercent === null ? strings.sending : `${strings.sending} ${this.uploadPercent}%`;
+      this.sendButton.querySelector("span")!.textContent = status;
+      this.progressLine.textContent = status;
+    }
     this.footer.hidden = this.confirming;
     this.confirm.hidden = !this.confirming;
     this.panel.setAttribute("aria-busy", String(this.sending || this.capturing));
@@ -561,31 +594,49 @@ export class NoteWindow {
     return this.pictures.length >= this.host.maxImages;
   }
 
-  /** Adds a picture, refusing what the site would refuse. */
+  /** Every image source enters the same Uppy queue. No bytes leave before Send. */
   add(file: File, taken?: Picture["taken"]) {
-    const { strings, maxImages, maxImageBytes } = this.host;
     this.problem = null;
-    if (this.pictures.length >= maxImages)
-      this.problem = format(strings.tooMany, { max: maxImages });
-    else if (!IMAGE_TYPES.includes(file.type) || file.size > maxImageBytes)
-      this.problem = format(strings.wrongImage, {
-        name: file.name,
-        size: Math.round(maxImageBytes / 1024 / 1024),
+    try {
+      const id = this.queue.addFile({
+        name: file.name, type: file.type, data: file, source: "luh", meta: { url: "", taken },
       });
-    else {
-      const picture = { id: this.nextId++, file, url: URL.createObjectURL(file), taken };
-      // The screenshot leads, then the picked part, then the rest.
-      const order = (each: Picture) =>
-        each.taken === "page" ? 0 : each.taken === "element" ? 1 : 2;
-      this.pictures = [...this.pictures, picture].sort((a, b) => order(a) - order(b));
+      this.queue.setFileMeta(id, { url: URL.createObjectURL(file) });
+    } catch {
+      this.rejected(file);
     }
     this.refresh();
   }
 
-  private remove(id: number) {
+  private rejected(file: File, count = this.full()) {
+    const { strings, maxImages, maxImageBytes } = this.host;
+    this.problem = count
+      ? format(strings.tooMany, { max: maxImages })
+      : format(strings.wrongImage, { name: file.name, size: Math.round(maxImageBytes / 1024 / 1024) });
+  }
+
+  /** Validate against the other files before changing anything, preserving the original on refusal. */
+  private replace(picture: Picture, file: File, drawn: boolean) {
+    const remaining = this.queue.getFiles().filter((each) => each.id !== picture.id);
+    const error = this.queue.validateRestrictions({ name: file.name, type: file.type, size: file.size, extension: file.name.split(".").pop() ?? "" }, remaining);
+    if (error) {
+      this.rejected(file, false);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    this.queue.setFileState(picture.id, {
+      data: file, name: file.name, type: file.type, size: file.size,
+      extension: file.name.split(".").pop() ?? "",
+      meta: { ...this.queue.getFile(picture.id).meta, name: file.name, type: file.type, url, drawn },
+    });
+    URL.revokeObjectURL(picture.url);
+    this.problem = null;
+  }
+
+  private remove(id: string) {
     const picture = this.pictures.find((each) => each.id === id);
     if (picture) URL.revokeObjectURL(picture.url);
-    this.pictures = this.pictures.filter((each) => each.id !== id);
+    this.queue.removeFile(id);
   }
 
   captureProgress(percent: number) {
@@ -638,12 +689,7 @@ export class NoteWindow {
     this.editorController = null;
     this.drawing = false;
     if (result.action === "done") {
-      URL.revokeObjectURL(picture.url);
-      this.pictures = this.pictures.map((each) =>
-        each.id === picture.id
-          ? { ...each, file: result.file, url: URL.createObjectURL(result.file), drawn: true }
-          : each,
-      );
+      this.replace(picture, result.file, true);
     } else if (result.action === "remove") this.remove(picture.id);
     this.refresh();
     const index = this.pictures.findIndex((each) => each.id === picture.id);
@@ -667,14 +713,24 @@ export class NoteWindow {
     }
     const opening = this.opening;
     this.sending = true;
+    this.uploadPercent = null;
+    this.queue.setState({ totalProgress: 0 });
     this.error = null;
     this.refresh();
     const page = this.pictures.find((picture) => picture.taken === "page");
     const files = this.pictures
-      .filter((picture) => picture !== page)
+      .filter((picture) => picture.id !== page?.id)
       .map((picture) =>
         picture.taken === "element" ? rename(picture.file, "element.png") : picture.file,
       );
+    const progress: SubmitProgress = {
+      onProgress: (percent) => {
+        if (opening !== this.opening || !this.isOpen || !this.sending || !Number.isFinite(percent)) return;
+        this.uploadPercent = Math.round(Math.max(0, Math.min(100, percent)));
+        this.queue.setState({ totalProgress: this.uploadPercent });
+        this.refresh();
+      },
+    };
     let error: string | null;
     try {
       error = await this.host.send({
@@ -683,7 +739,7 @@ export class NoteWindow {
         kind: this.kind,
         screenshot: page ? rename(page.file, "page.png") : null,
         images: files,
-      });
+      }, progress);
     } catch {
       error = this.host.strings.failed;
     }
@@ -698,14 +754,39 @@ export class NoteWindow {
     this.field.focus();
   }
 
-  // Paste and drop work anywhere while the window is open.
+  /** Called after close when the controller replaces or disconnects this window. */
+  dispose() {
+    this.queue.destroy();
+  }
+
+  private visibleDialogs() {
+    return [...document.querySelectorAll('dialog:modal, [role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]')]
+      .filter((dialog) => dialog.getClientRects().length > 0);
+  }
+
+  private ownsInput() {
+    if (!this.isOpen || this.drawing || this.sending || this.capturing || this.confirming) return false;
+    // Feedback opens above its existing host dialog. A later modal owns the next file action.
+    return this.visibleDialogs().every((dialog) =>
+      this.openingDialogs.has(dialog) || dialog.contains(this.root.host));
+  }
+
+  // Paste and drop work anywhere while this window owns the active task.
   private listen() {
     const on = <K extends keyof DocumentEventMap>(
       type: K,
       listener: (event: DocumentEventMap[K]) => void,
     ) => {
-      document.addEventListener(type, listener);
-      this.cleanups.push(() => document.removeEventListener(type, listener));
+      const guarded = (event: DocumentEventMap[K]) => {
+        if (this.ownsInput()) listener(event);
+        else {
+          this.dragging = 0;
+          this.dropZone.hidden = true;
+          hideFromTop(this.dropZone);
+        }
+      };
+      document.addEventListener(type, guarded, true);
+      this.cleanups.push(() => document.removeEventListener(type, guarded, true));
     };
     const carries = (event: DragEvent) => [...(event.dataTransfer?.types ?? [])].includes("Files");
     const showDrop = (shown: boolean) => {
@@ -720,10 +801,12 @@ export class NoteWindow {
       );
       if (!files.length) return;
       event.preventDefault();
+      event.stopImmediatePropagation();
       files.forEach((file) => this.add(file));
     });
     on("dragenter", (event) => {
       if (!carries(event)) return;
+      event.stopImmediatePropagation();
       this.dragging++;
       showDrop(true);
     });
@@ -733,7 +816,10 @@ export class NoteWindow {
       if (!this.dragging) showDrop(false);
     });
     on("dragover", (event) => {
-      if (carries(event)) event.preventDefault();
+      if (carries(event)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
     });
     on("drop", (event) => {
       this.dragging = 0;
@@ -741,6 +827,7 @@ export class NoteWindow {
       const files = [...(event.dataTransfer?.files ?? [])];
       if (!files.length) return;
       event.preventDefault();
+      event.stopImmediatePropagation();
       if (!this.drawing && !this.sending) files.forEach((file) => this.add(file));
     });
     const onResize = () => this.place();
@@ -748,9 +835,16 @@ export class NoteWindow {
     this.cleanups.push(() => window.removeEventListener("resize", onResize));
   }
 
+  private viewport() {
+    return {
+      width: document.documentElement.clientWidth || window.innerWidth,
+      height: document.documentElement.clientHeight || window.innerHeight,
+    };
+  }
+
   /** Width on this screen: 400, or the screen less its margins. */
   private width() {
-    return Math.min(400, window.innerWidth - 32);
+    return Math.min(400, this.viewport().width - 32);
   }
 
   // Beside the pick, level with its top, as a comment sits at its pin;
@@ -759,7 +853,7 @@ export class NoteWindow {
   // or in the top right corner.
   place() {
     const width = this.width();
-    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    const viewport = this.viewport();
     const rect = this.host.anchor();
     let x = viewport.width - width - 16;
     let y = 16;
@@ -793,7 +887,7 @@ export class NoteWindow {
     this.apply(width, room);
   }
 
-  private apply(width = this.width(), room = window.innerHeight - this.position.y - 16) {
+  private apply(width = this.width(), room = this.viewport().height - this.position.y - 16) {
     Object.assign(this.panel.style, {
       left: `${this.position.x}px`,
       top: `${this.position.y}px`,
@@ -805,8 +899,8 @@ export class NoteWindow {
   private moveTo(x: number, y: number) {
     const width = this.width();
     this.position = {
-      x: Math.max(8, Math.min(x, window.innerWidth - width - 8)),
-      y: Math.max(8, Math.min(y, window.innerHeight - 120)),
+      x: Math.max(8, Math.min(x, this.viewport().width - width - 8)),
+      y: Math.max(8, Math.min(y, this.viewport().height - 120)),
     };
     this.apply(width);
   }

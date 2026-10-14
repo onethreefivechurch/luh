@@ -68,6 +68,20 @@ document.querySelector('#pick')!.addEventListener('click', () => notes.toggle())
 
 `onSubmit` resolves after the host accepts the note. Returning `{ error: string }` or throwing keeps the note open for retry. A successful `fetch()` alone is insufficient: check `response.ok`. Files must use `FormData` or another binary upload strategy; JSON serialization does not upload a `File`. The library sends nothing before submission.
 
+Image selection uses Uppy Core behind the existing feedback window. The multiple-image chooser, page-wide file drop, image paste and screenshot capture enter one queue. Images remain local until Send; editing and removal update that same queue. A refused send retains the words and images for retry. The `Note` fields remain unchanged.
+
+A delivery hook can report actual transport progress through its second argument:
+
+```ts
+async onSubmit(note, { onProgress }) {
+  return sendFeedback(note, {
+    onUploadProgress: percent => onProgress(percent),
+  });
+}
+```
+
+`sendFeedback` represents the host's checked binary transport. `onProgress` accepts percentages from 0 to 100, clamps finite values and ignores callbacks after the draft closes. Existing one-argument hooks continue to work. Without reported progress, the window shows an indeterminate progress bar. Reaching 100% means the bytes have transferred; the window continues showing Sending until the hook resolves. The `submitUrl` fetch shortcut remains indeterminate because fetch supplies no upload-progress events. The progress bar has the public `upload-progress` shadow part.
+
 An `onSubmit` hook takes precedence over `submitUrl`. The optional `submitUrl` shortcut uses the same multipart fields above, sends same-origin credentials, checks the HTTP status and displays a JSON `{ error: string }` response when available. The host owns the endpoint, validation, authentication, authorization, CSRF protection and spam control. Use `onSubmit` to add headers or another transport.
 
 ## Plain HTML, without a bundler
