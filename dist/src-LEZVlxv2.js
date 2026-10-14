@@ -3453,6 +3453,8 @@ var jt = [
 	field;
 	list = G("ul", { class: "cm-images" });
 	screenshotButton;
+	pickButton;
+	suspended = !1;
 	addButton;
 	note = G("p", { class: "cm-small cm-warning" });
 	problemLine = G("p", {
@@ -3558,8 +3560,13 @@ var jt = [
 			class: "cm-button cm-danger",
 			part: "discard",
 			onclick: () => this.close()
-		}, n.discard));
-		let a = G("div", { class: "cm-form" }, this.quote, this.kindRow, this.field, t.name === "off" ? null : G("label", { class: "cm-small" }, t.name === "optional" ? n.nameOptional : n.nameLabel, this.nameField), this.errorLine, this.list, G("div", { class: "cm-picture-actions" }, this.screenshotButton, this.addButton), me() ? G("p", { class: "cm-small" }, n.dropHint) : null, this.note, this.problemLine, this.progressLine, this.uploadProgress, this.chooser);
+		}, n.discard)), this.pickButton = t.pick ? G("button", {
+			type: "button",
+			class: "cm-button",
+			part: "point",
+			onclick: () => t.pick?.()
+		}, this.icon("pen"), t.pickLabel) : null;
+		let a = G("div", { class: "cm-form" }, this.pickButton, this.quote, this.kindRow, this.field, t.name === "off" ? null : G("label", { class: "cm-small" }, t.name === "optional" ? n.nameOptional : n.nameLabel, this.nameField), this.errorLine, this.list, G("div", { class: "cm-picture-actions" }, this.screenshotButton, this.addButton), me() ? G("p", { class: "cm-small" }, n.dropHint) : null, this.note, this.problemLine, this.progressLine, this.uploadProgress, this.chooser);
 		this.sendButton.addEventListener("click", () => void this.submit()), this.title.id = this.titleId, this.panel = G("section", {
 			class: "cm-window",
 			role: "dialog",
@@ -3575,7 +3582,7 @@ var jt = [
 		}, n.dropHere), e.append(this.panel, this.dropZone), this.draggable(r);
 	}
 	get isOpen() {
-		return !this.panel.hidden;
+		return !this.panel.hidden || this.suspended;
 	}
 	get pictures() {
 		let e = (e) => e.taken === "page" ? 0 : e.taken === "element" ? 1 : 2;
@@ -3599,12 +3606,23 @@ var jt = [
 		}, this.icon(e));
 		return i.addEventListener("pointerdown", (e) => e.stopPropagation()), i;
 	}
+	setPointAvailable(e) {
+		this.pickButton && (this.pickButton.hidden = !e);
+	}
+	suspend() {
+		return !this.isOpen || !this.acceptsFiles() ? !1 : (this.suspended = !0, this.opening++, this.dragging = 0, X(this.panel), X(this.dropZone), this.panel.hidden = !0, this.dropZone.hidden = !0, !0);
+	}
 	open(e) {
+		this.suspended = !1;
 		let { strings: t } = this.host;
-		this.opening++, this.openingDialogs = new Set(this.visibleDialogs()), this.via = e.via, this.title.textContent = e.via === "pick" && e.name ? e.name : t.title, this.selectedText = e.selectedText ?? "", this.quote.textContent = this.selectedText || e.pickedText || "", this.quote.hidden = !this.quote.textContent, this.quote.setAttribute("aria-label", this.selectedText ? t.selection : t.elementImageName), this.error = null, this.problem = null, this.confirming = !1, this.panel.hidden = !1, fe(this.panel), this.listen(), this.refresh(), this.place(), this.fit(), requestAnimationFrame(() => this.field.focus({ preventScroll: !0 }));
+		this.opening++, this.openingDialogs = new Set(this.visibleDialogs()), this.via = e.via, this.title.textContent = e.via === "pick" && e.name ? e.name : t.title, this.selectedText = e.selectedText ?? "", this.quote.textContent = this.selectedText || e.pickedText || "", this.quote.hidden = !this.quote.textContent, this.quote.setAttribute("aria-label", this.selectedText ? t.selection : t.elementImageName), this.error = null, this.problem = null, this.confirming = !1, this.panel.hidden = !1, fe(this.panel), this.cleanups.forEach((e) => e()), this.cleanups = [], this.listen(), this.refresh(), this.place(), this.fit();
+		let n = this.opening;
+		requestAnimationFrame(() => {
+			n === this.opening && !this.panel.hidden && this.field.focus({ preventScroll: !0 });
+		});
 	}
 	close() {
-		this.isOpen && (this.opening++, this.editorController?.abort(), this.editorController = null, this.drawing = !1, this.sending = !1, this.uploadPercent = null, this.body = "", this.field.value = "", this.nameField.value = "", this.kind = this.host.kinds[0]?.value ?? null, this.pictures.forEach((e) => URL.revokeObjectURL(e.url)), this.queue.clear(), this.confirming = !1, this.capturing = !1, X(this.panel), X(this.dropZone), this.dropZone.hidden = !0, this.panel.hidden = !0, this.cleanups.forEach((e) => e()), this.cleanups = [], this.host.closed());
+		this.isOpen && (this.suspended = !1, this.opening++, this.editorController?.abort(), this.editorController = null, this.drawing = !1, this.sending = !1, this.uploadPercent = null, this.body = "", this.field.value = "", this.nameField.value = "", this.kind = this.host.kinds[0]?.value ?? null, this.pictures.forEach((e) => URL.revokeObjectURL(e.url)), this.queue.clear(), this.confirming = !1, this.capturing = !1, X(this.panel), X(this.dropZone), this.dropZone.hidden = !0, this.panel.hidden = !0, this.cleanups.forEach((e) => e()), this.cleanups = [], this.host.closed());
 	}
 	requestClose() {
 		if (!this.sending) {
@@ -3633,7 +3651,9 @@ var jt = [
 		this.field.style.height = "auto", this.field.style.height = `${Math.min(this.field.scrollHeight + 2, 240)}px`;
 	}
 	refresh() {
-		let { strings: e, kinds: t } = this.host, n = t.find((e) => e.value === this.kind)?.prompt ?? e.placeholder;
+		let { strings: e, kinds: t } = this.host;
+		this.pickButton && (this.pickButton.disabled = !this.acceptsFiles());
+		let n = t.find((e) => e.value === this.kind)?.prompt ?? e.placeholder;
 		this.field.placeholder = n, this.field.disabled = this.sending, this.kindRow.hidden = t.length === 0, this.kindRow.replaceChildren(...t.map((e, n) => {
 			let r = e.value === this.kind, i = G("button", {
 				type: "button",
@@ -3707,23 +3727,25 @@ var jt = [
 		return this.pictures.length >= this.host.maxImages;
 	}
 	add(e, t) {
-		this.problem = null;
-		try {
-			let n = this.queue.addFile({
-				name: e.name,
-				type: e.type,
-				data: e,
-				source: "luh",
-				meta: {
-					url: "",
-					taken: t
-				}
-			});
-			this.queue.setFileMeta(n, { url: URL.createObjectURL(e) });
-		} catch {
-			this.rejected(e);
+		if (!this.panel.hidden && this.acceptsFiles()) {
+			this.problem = null;
+			try {
+				let n = this.queue.addFile({
+					name: e.name,
+					type: e.type,
+					data: e,
+					source: "luh",
+					meta: {
+						url: "",
+						taken: t
+					}
+				});
+				this.queue.setFileMeta(n, { url: URL.createObjectURL(e) });
+			} catch {
+				this.rejected(e);
+			}
+			this.refresh();
 		}
-		this.refresh();
 	}
 	rejected(e, t = this.full()) {
 		let { strings: n, maxImages: r, maxImageBytes: i } = this.host;
@@ -3764,10 +3786,10 @@ var jt = [
 		t && URL.revokeObjectURL(t.url), this.queue.removeFile(e);
 	}
 	captureProgress(e) {
-		this.capturing && this.isOpen && (this.percent = e, this.progressLine.textContent = `${this.host.strings.screenshotTaking} ${e}%`, this.screenshotButton.querySelector("span").textContent = `${this.host.strings.screenshotTaking} ${e}%`);
+		this.capturing && !this.panel.hidden && (this.percent = e, this.progressLine.textContent = `${this.host.strings.screenshotTaking} ${e}%`, this.screenshotButton.querySelector("span").textContent = `${this.host.strings.screenshotTaking} ${e}%`);
 	}
 	async screenshot() {
-		if (!this.host.screenshot || this.capturing) return;
+		if (!this.host.screenshot || this.panel.hidden || !this.acceptsFiles() || this.capturing) return;
 		this.capturing = !0, this.percent = 0, this.problem = null, this.refresh();
 		let e = this.opening;
 		if (await new Promise((e) => requestAnimationFrame(() => setTimeout(e, 0))), !this.isOpen || e !== this.opening) return;
@@ -3775,7 +3797,7 @@ var jt = [
 		e === this.opening && (this.capturing = !1, this.isOpen && (t ? (this.add(t, "page"), n && !this.full() && this.add(n, "element")) : this.problem = this.host.strings.screenshotFailed, this.refresh(), this.list.querySelector(".cm-image .cm-button")?.focus()));
 	}
 	async draw(e) {
-		if (!this.host.drawing || this.drawing) return;
+		if (!this.host.drawing || this.panel.hidden || !this.acceptsFiles()) return;
 		let t = this.opening;
 		this.drawing = !0;
 		let n = new AbortController();
@@ -3790,7 +3812,7 @@ var jt = [
 		return this.drawing;
 	}
 	async submit() {
-		if (!this.body.trim() || this.sending || this.capturing) return;
+		if (!this.body.trim() || this.panel.hidden || this.sending || this.capturing) return;
 		if (this.host.name === "required" && !this.nameField.value.trim()) {
 			this.error = this.host.strings.nameRequired, this.refresh(), this.nameField.focus();
 			return;
@@ -3798,7 +3820,7 @@ var jt = [
 		let e = this.opening;
 		this.sending = !0, this.uploadPercent = null, this.queue.setState({ totalProgress: 0 }), this.error = null, this.refresh();
 		let t = this.pictures.find((e) => e.taken === "page"), n = this.pictures.filter((e) => e.id !== t?.id).map((e) => e.taken === "element" ? Nt(e.file, "element.png") : e.file), r = { onProgress: (t) => {
-			e === this.opening && this.isOpen && this.sending && Number.isFinite(t) && (this.uploadPercent = Math.round(Math.max(0, Math.min(100, t))), this.queue.setState({ totalProgress: this.uploadPercent }), this.refresh());
+			e === this.opening && !this.panel.hidden && this.sending && Number.isFinite(t) && (this.uploadPercent = Math.round(Math.max(0, Math.min(100, t))), this.queue.setState({ totalProgress: this.uploadPercent }), this.refresh());
 		} }, i;
 		try {
 			i = await this.host.send({
@@ -3823,7 +3845,7 @@ var jt = [
 		return this.isOpen ? this.visibleDialogs().every((e) => this.openingDialogs.has(e) || e.contains(this.root.host)) : !1;
 	}
 	acceptsFiles() {
-		return !this.drawing && !this.sending && !this.capturing && !this.confirming;
+		return !this.suspended && !this.drawing && !this.sending && !this.capturing && !this.confirming;
 	}
 	listen() {
 		let e = (e, t) => {
@@ -3964,6 +3986,8 @@ var Lt = class extends HTMLElement {
 	step = 0;
 	context = null;
 	via = "write";
+	picking = !1;
+	pickWasActive = !1;
 	watcher = null;
 	toastTimer = 0;
 	themeQuery = null;
@@ -3989,7 +4013,7 @@ var Lt = class extends HTMLElement {
 		return this.settings = {
 			...this.settings,
 			...e
-		}, this.applyTheme(), this.strings = z(this.settings.language ?? document.documentElement.lang ?? "en", this.settings.languages, this.settings.strings), this.ready && this.isOpen ? this.stale = !0 : this.ready && this.build(), this;
+		}, this.picking && (!this.allowed || this.settings.elementPicking === !1) && this.open(), (!this.allowed || this.settings.elementPicking === !1) && (this.active = !1), this.window?.setPointAvailable(this.allowed && this.settings.elementPicking !== !1 && !!this.settings.pickLabel), this.applyTheme(), this.strings = z(this.settings.language ?? document.documentElement.lang ?? "en", this.settings.languages, this.settings.strings), this.ready && this.isOpen ? this.stale = !0 : this.ready && this.build(), this;
 	}
 	get options() {
 		return this.settings;
@@ -4031,7 +4055,7 @@ var Lt = class extends HTMLElement {
 		this.picker = new ge(t, {
 			strings: this.strings,
 			ignore: this.ignore,
-			paused: () => this.isOpen || this.capturing,
+			paused: () => this.isOpen && !this.picking || this.capturing,
 			pick: (e, t) => this.open({
 				element: e,
 				selectedText: t
@@ -4043,6 +4067,8 @@ var Lt = class extends HTMLElement {
 			class: "cm-button cm-trigger",
 			onclick: (e) => this.open({ from: e })
 		}, Y("pen", this.settings.icons), this.strings.trigger)), this.window = new Mt(n, {
+			pickLabel: this.settings.pickLabel,
+			pick: this.settings.pickLabel && this.settings.elementPicking !== !1 ? () => this.point() : void 0,
 			icons: this.settings.icons,
 			strings: this.strings,
 			name: this.settings.name ?? "off",
@@ -4086,14 +4112,26 @@ var Lt = class extends HTMLElement {
 			capturing: this.capturing
 		};
 	}
+	point() {
+		this.allowed && this.settings.elementPicking !== !1 && this.isOpen && !this.capturing && this.window.suspend() && (this.pickWasActive = this.active, this.picking = !0, this.picker.pin(null), this.returnFocus?.focus({ preventScroll: !0 }), this.active = !0, this.changed());
+	}
 	open(e = {}) {
+		if (this.picking && (!e.element || !this.allowed || this.settings.elementPicking === !1)) {
+			this.picking = !1, this.active = this.pickWasActive, this.picker.pin(this.lineage[this.step]?.element ?? null), this.window.open({
+				via: this.via,
+				name: this.context?.element?.name,
+				selectedText: this.context?.selectedText,
+				pickedText: this.context?.element?.text
+			}), this.window.setPointAvailable(this.allowed && this.settings.elementPicking !== !1 && !!this.settings.pickLabel), this.changed();
+			return;
+		}
 		if (!this.ready || !this.allowed || e.element && this.settings.elementPicking === !1) return;
-		if (this.isOpen) {
+		if (this.isOpen && !this.picking) {
 			if (this.windowHost.isConnected) return this.window.panel.querySelector("textarea")?.focus();
 			this.window.close();
 		}
 		let t = e.from, n = t instanceof Event ? t.currentTarget instanceof Element ? t.currentTarget : null : t ?? null, r = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-		this.returnFocus = n instanceof HTMLElement ? n : r;
+		this.picking || (this.returnFocus = n instanceof HTMLElement ? n : r);
 		let i = e.element ?? null, a = ae(i ?? n, this.ignore);
 		(a ?? document.body).append(this.windowHost), this.lineage = [];
 		for (let e = i; e && e !== document.body; e = e.parentElement) this.lineage.push({
@@ -4103,19 +4141,22 @@ var Lt = class extends HTMLElement {
 		this.step = 0, this.shot = null, this.via = i ? "pick" : "write";
 		let o = e.selectedText ?? "";
 		this.context = {
-			...W({
+			...this.picking && this.context ? {
+				...this.context,
+				selectedText: void 0
+			} : W({
 				appVersion: this.settings.appVersion ?? this.getAttribute("app-version") ?? void 0,
 				extra: this.settings.context?.() ?? {},
 				dialog: a
 			}),
 			...i ? { element: H(i, this.strings) } : {},
 			...o ? { selectedText: o } : {}
-		}, this.window.open({
+		}, this.picking && (this.picking = !1, this.active = this.pickWasActive), this.window.open({
 			via: this.via,
 			name: i ? V(i, this.strings) : void 0,
 			selectedText: e.selectedText,
 			pickedText: this.context.element?.text
-		}), this.picker.pin(i), this.watcher = new MutationObserver(() => {
+		}), this.picker.pin(i), this.watcher?.disconnect(), this.watcher = new MutationObserver(() => {
 			this.windowHost.isConnected || this.window.close();
 		}), this.watcher.observe(document.body, {
 			childList: !0,
@@ -4126,11 +4167,11 @@ var Lt = class extends HTMLElement {
 		this.window?.close();
 	}
 	closed() {
-		this.watcher?.disconnect(), this.watcher = null, this.picker.pin(null), this.lineage = [], this.shot = null, this.context = null, document.body.append(this.windowHost);
+		this.picking && (this.picking = !1, this.active = this.isConnected && this.pickWasActive), this.watcher?.disconnect(), this.watcher = null, this.picker.pin(null), this.lineage = [], this.shot = null, this.context = null, document.body.append(this.windowHost);
 		let e = this.returnFocus;
 		this.returnFocus = null, requestAnimationFrame(() => {
 			e?.isConnected && e.focus({ preventScroll: !0 });
-		}), this.stale && this.build(), this.changed(), this.dispatchEvent(new CustomEvent("close", { detail: this.state }));
+		}), this.stale && this.isConnected && this.build(), this.changed(), this.dispatchEvent(new CustomEvent("close", { detail: this.state }));
 	}
 	widen(e) {
 		this.step = Math.max(0, Math.min(this.lineage.length - 1, this.step + e));
@@ -4188,17 +4229,26 @@ var Lt = class extends HTMLElement {
 	}
 	onKey = (e) => {
 		if (!this.allowed) {
-			this.active = !1;
+			this.picking && this.open(), this.active = !1, this.isOpen && e.key === "Escape" && (e.preventDefault(), e.stopImmediatePropagation(), this.window.escape());
+			return;
+		}
+		let t = this.settings.key ?? this.getAttribute("key") ?? "c", n = !e.metaKey && !e.ctrlKey && !e.altKey;
+		if (this.picking && (e.key === "Escape" || n && typeof t == "string" && e.key.toLowerCase() === t.toLowerCase())) {
+			e.preventDefault(), e.stopImmediatePropagation(), this.open();
 			return;
 		}
 		if (this.window?.editing) return;
+		if (this.picking) {
+			this.picker.key(e) && (e.preventDefault(), e.stopImmediatePropagation());
+			return;
+		}
 		if (this.isOpen) {
 			e.key === "Escape" && (e.preventDefault(), e.stopImmediatePropagation(), this.window.escape());
 			return;
 		}
 		if (this.capturing) return;
-		let t = this.settings.key ?? this.getAttribute("key") ?? "c", n = !e.metaKey && !e.ctrlKey && !e.altKey;
-		if (t && n && typeof t == "string" && e.key.toLowerCase() === t.toLowerCase() && !_e(e.composedPath()[0] ?? e.target)) e.preventDefault(), this.toggle();
+		let r = this.settings.key ?? this.getAttribute("key") ?? "c";
+		if (r && n && typeof r == "string" && e.key.toLowerCase() === r.toLowerCase() && !_e(e.composedPath()[0] ?? e.target)) e.preventDefault(), this.toggle();
 		else if (this.active) {
 			if (e.key === "Escape") {
 				if (document.querySelector(`:is(${this.ignore}) [aria-expanded="true"]`)) return;
@@ -4255,4 +4305,4 @@ function Ht(e, t = {}) {
 //#endregion
 export { Lt as a, se as c, L as d, z as f, Ht as i, R as l, l as m, Vt as n, Pt as o, u as p, Bt as r, Ft as s, zt as t, I as u };
 
-//# sourceMappingURL=src-ZIlhMg7B.js.map
+//# sourceMappingURL=src-LEZVlxv2.js.map

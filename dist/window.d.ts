@@ -3,6 +3,8 @@ import type { IconOverrides } from "./dom";
 import type { Kind, NameField, Via, SubmitProgress } from "./types";
 export declare const IMAGE_TYPES: string[];
 export interface WindowCallbacks {
+    pickLabel?: string;
+    pick?(): void;
     strings: Strings;
     icons?: IconOverrides;
     name: NameField;
@@ -90,6 +92,8 @@ export declare class NoteWindow {
     private field;
     private list;
     private screenshotButton;
+    private pickButton;
+    private suspended;
     private addButton;
     private note;
     private problemLine;
@@ -104,6 +108,9 @@ export declare class NoteWindow {
     private get pictures();
     private icon;
     private toolButton;
+    setPointAvailable(available: boolean): void;
+    /** Hides the window while keeping the draft and Uppy queue for picking. */
+    suspend(): boolean;
     open(options: {
         via: Via;
         name?: string;

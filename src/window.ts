@@ -12,6 +12,8 @@ import type { Kind, NameField, Via, SubmitProgress } from "./types";
 export const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export interface WindowCallbacks {
+  pickLabel?: string;
+  pick?(): void;
   strings: Strings;
   icons?: IconOverrides;
   name: NameField;
@@ -85,6 +87,8 @@ export class NoteWindow {
   private field: HTMLTextAreaElement;
   private list = h("ul", { class: "cm-images" });
   private screenshotButton: HTMLButtonElement;
+  private pickButton: HTMLButtonElement | null;
+  private suspended = false;
   private addButton: HTMLButtonElement;
   private note = h("p", { class: "cm-small cm-warning" });
   private problemLine = h("p", { class: "cm-small cm-error", role: "alert" });
@@ -253,9 +257,13 @@ export class NoteWindow {
         strings.discard,
       ),
     );
+    this.pickButton = host.pick ? h("button", {
+      type: "button", class: "cm-button", part: "point", onclick: () => host.pick?.(),
+    }, this.icon("pen"), host.pickLabel) : null;
     const form = h(
       "div",
       { class: "cm-form" },
+      this.pickButton,
       this.quote,
       this.kindRow,
       this.field,
@@ -313,7 +321,7 @@ export class NoteWindow {
   }
 
   get isOpen() {
-    return !this.panel.hidden;
+    return !this.panel.hidden || this.suspended;
   }
 
   private get pictures(): Picture[] {
@@ -348,7 +356,25 @@ export class NoteWindow {
     return button;
   }
 
+  setPointAvailable(available: boolean) {
+    if (this.pickButton) this.pickButton.hidden = !available;
+  }
+
+  /** Hides the window while keeping the draft and Uppy queue for picking. */
+  suspend() {
+    if (!this.isOpen || !this.acceptsFiles()) return false;
+    this.suspended = true;
+    this.opening++;
+    this.dragging = 0;
+    hideFromTop(this.panel);
+    hideFromTop(this.dropZone);
+    this.panel.hidden = true;
+    this.dropZone.hidden = true;
+    return true;
+  }
+
   open(options: { via: Via; name?: string; selectedText?: string; pickedText?: string }) {
+    this.suspended = false;
     const { strings } = this.host;
     this.opening++;
     this.openingDialogs = new Set(this.visibleDialogs());
@@ -366,16 +392,22 @@ export class NoteWindow {
     this.confirming = false;
     this.panel.hidden = false;
     showOnTop(this.panel);
+    this.cleanups.forEach((cleanup) => cleanup());
+    this.cleanups = [];
     this.listen();
     this.refresh();
     this.place();
     this.fit();
-    requestAnimationFrame(() => this.field.focus({ preventScroll: true }));
+    const opening = this.opening;
+    requestAnimationFrame(() => {
+      if (opening === this.opening && !this.panel.hidden) this.field.focus({ preventScroll: true });
+    });
   }
 
   /** Closes and forgets the note. */
   close() {
     if (!this.isOpen) return;
+    this.suspended = false;
     this.opening++;
     this.editorController?.abort();
     this.editorController = null;
@@ -451,6 +483,7 @@ export class NoteWindow {
   // Everything that depends on state, updated in place.
   private refresh() {
     const { strings, kinds } = this.host;
+    if (this.pickButton) this.pickButton.disabled = !this.acceptsFiles();
     const placeholder =
       kinds.find((kind) => kind.value === this.kind)?.prompt ?? strings.placeholder;
     this.field.placeholder = placeholder;
@@ -596,6 +629,7 @@ export class NoteWindow {
 
   /** Every image source enters the same Uppy queue. No bytes leave before Send. */
   add(file: File, taken?: Picture["taken"]) {
+    if (this.panel.hidden || !this.acceptsFiles()) return;
     this.problem = null;
     try {
       const id = this.queue.addFile({
@@ -640,7 +674,7 @@ export class NoteWindow {
   }
 
   captureProgress(percent: number) {
-    if (!this.capturing || !this.isOpen) return;
+    if (!this.capturing || this.panel.hidden) return;
     this.percent = percent;
     this.progressLine.textContent = `${this.host.strings.screenshotTaking} ${percent}%`;
     this.screenshotButton.querySelector("span")!.textContent =
@@ -648,7 +682,7 @@ export class NoteWindow {
   }
 
   private async screenshot() {
-    if (!this.host.screenshot) return;
+    if (!this.host.screenshot || this.panel.hidden || !this.acceptsFiles()) return;
     if (this.capturing) return;
     this.capturing = true;
     this.percent = 0;
@@ -673,7 +707,7 @@ export class NoteWindow {
   }
 
   private async draw(picture: Picture) {
-    if (!this.host.drawing || this.drawing) return;
+    if (!this.host.drawing || this.panel.hidden || !this.acceptsFiles()) return;
     const opening = this.opening;
     this.drawing = true;
     const controller = new AbortController();
@@ -704,7 +738,7 @@ export class NoteWindow {
   }
 
   private async submit() {
-    if (!this.body.trim() || this.sending || this.capturing) return;
+    if (!this.body.trim() || this.panel.hidden || this.sending || this.capturing) return;
     if (this.host.name === "required" && !this.nameField.value.trim()) {
       this.error = this.host.strings.nameRequired;
       this.refresh();
@@ -725,7 +759,7 @@ export class NoteWindow {
       );
     const progress: SubmitProgress = {
       onProgress: (percent) => {
-        if (opening !== this.opening || !this.isOpen || !this.sending || !Number.isFinite(percent)) return;
+        if (opening !== this.opening || this.panel.hidden || !this.sending || !Number.isFinite(percent)) return;
         this.uploadPercent = Math.round(Math.max(0, Math.min(100, percent)));
         this.queue.setState({ totalProgress: this.uploadPercent });
         this.refresh();
@@ -772,7 +806,7 @@ export class NoteWindow {
   }
 
   private acceptsFiles() {
-    return !this.drawing && !this.sending && !this.capturing && !this.confirming;
+    return !this.suspended && !this.drawing && !this.sending && !this.capturing && !this.confirming;
   }
 
   // Foreground ownership blocks file navigation even while this draft is busy.

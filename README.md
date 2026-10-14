@@ -68,6 +68,8 @@ document.querySelector('#pick')!.addEventListener('click', () => notes.toggle())
 
 `onSubmit` resolves after the host accepts the note. Returning `{ error: string }` or throwing keeps the note open for retry. A successful `fetch()` alone is insufficient: check `response.ok`. Files must use `FormData` or another binary upload strategy; JSON serialization does not upload a `File`. The library sends nothing before submission.
 
+Hosts offering in-window picking set `pickLabel`, for example `pickLabel: "Point"`. Point hides the window while the person selects an element, keeping the words, name, kind and image queue. Escape or the configured picking shortcut returns to the original draft. The initial page context stays captured at the original opening; the chosen element and selected words update. `state.open` remains true while Point is active. Revoking permission or disabling element picking restores the retained draft and hides Point; delivery still checks the current permission.
+
 Image selection uses Uppy Core behind the existing feedback window. The multiple-image chooser, page-wide file drop, image paste and screenshot capture enter one queue. Images remain local until Send; editing and removal update that same queue. A refused send retains the words and images for retry. The `Note` fields remain unchanged.
 
 A delivery hook can report actual transport progress through its second argument:
@@ -114,6 +116,7 @@ The `browser` entry registers `<luh-notes>`; it does not append a widget. The ma
 | `screenshot` | `true` | Offers page capture. Disabling it still allows uploading images. |
 | `drawing` | `true` | Offers arrows, boxes, text, blur and crop on images. |
 | `deactivateOnSubmit` | `true` | Turns comment mode off after the host accepts a note. `false` keeps picking on. Refusals and pending sends retain the mode and draft. |
+| `pickLabel` | Unset | Host-translated in-window Point button; selecting an element retains the draft and images. Escape returns to the draft. |
 | `elementPicking` | `true` | Enables picking by key, `toggle()` or `open({ element })`. Disabling it retains the ordinary note window. |
 | `language` | Page language | Language of the widget's labels and its `lang` attribute. |
 | `languages` | English | Host locale dictionaries; every key accepts `Partial<Strings>`. |
@@ -202,7 +205,7 @@ Public parts remain stable independently of internal CSS class names. Generic pa
 | `luh-notes` | `trigger`, `outline`, `outline-label`, `toast`, `announcement`, `icon`, `icon-pen` |
 | `luh-surface`: window | `window`, `header`, `title`, `scroll`, `form`, `footer`, `move-handle`, `quote`, `kinds`, `kind` |
 | `luh-surface`: fields and text | `field`, `body-field`, `name-field`, `label`, `text`, `small-text`, `fine-print`, `warning`, `error`, `error-message`, `shortcut`, `announcement` |
-| `luh-surface`: buttons | `button`, `icon-button`, `primary`, `quiet`, `danger`, `send`, `cancel`, `close`, `wider`, `narrower`, `screenshot`, `add-images`, `draw`, `remove-image` |
+| `luh-surface`: buttons | `button`, `icon-button`, `primary`, `quiet`, `danger`, `send`, `cancel`, `close`, `wider`, `narrower`, `screenshot`, `add-images`, `point`, `draw`, `remove-image` |
 | `luh-surface`: pictures | `images`, `image-row`, `image`, `image-name`, `thumbnail`, `image-actions`, `drop-zone` |
 | `luh-surface`: discard | `discard-dialog`, `discard-text`, `keep-editing`, `discard` |
 | `luh-surface`: editor | `editor`, `editor-header`, `editor-footer`, `editor-help`, `tools`, `tool`, `tool-label`, `tool-arrow`, `tool-box`, `tool-text`, `tool-blur`, `tool-crop`, `undo`, `redo`, `delete-mark`, `done`, `editor-cancel`, `editor-remove` |

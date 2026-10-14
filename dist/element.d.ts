@@ -22,6 +22,8 @@ export declare class CommentModeElement extends HTMLElement {
     private step;
     private context;
     private via;
+    private picking;
+    private pickWasActive;
     private watcher;
     private toastTimer;
     private themeQuery;
@@ -49,6 +51,7 @@ export declare class CommentModeElement extends HTMLElement {
     toggle(force?: boolean): void;
     get isOpen(): boolean;
     get state(): CommentModeState;
+    private point;
     /**
      * Opens the note window: on its own (Send feedback), or as a comment on an
      * element. A dialog the opener sits in hosts the window, so the dialog's

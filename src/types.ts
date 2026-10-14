@@ -77,6 +77,8 @@ export type NameField = "off" | "optional" | "required";
 export type Theme = "auto" | "light" | "dark";
 
 export interface CommentModeOptions {
+  /** In-window picking preserves the draft. Host-translated label; absent disables the action. */
+  pickLabel?: string;
   /** Turns picking off after an accepted send. Default true; false keeps comment mode active. */
   deactivateOnSubmit?: boolean;
   /** Widget palette. Auto follows prefers-color-scheme; host CSS tokens always override colors. */
