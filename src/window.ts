@@ -765,13 +765,17 @@ export class NoteWindow {
   }
 
   private ownsInput() {
-    if (!this.isOpen || this.drawing || this.sending || this.capturing || this.confirming) return false;
+    if (!this.isOpen) return false;
     // Feedback opens above its existing host dialog. A later modal owns the next file action.
     return this.visibleDialogs().every((dialog) =>
       this.openingDialogs.has(dialog) || dialog.contains(this.root.host));
   }
 
-  // Paste and drop work anywhere while this window owns the active task.
+  private acceptsFiles() {
+    return !this.drawing && !this.sending && !this.capturing && !this.confirming;
+  }
+
+  // Foreground ownership blocks file navigation even while this draft is busy.
   private listen() {
     const on = <K extends keyof DocumentEventMap>(
       type: K,
@@ -795,20 +799,24 @@ export class NoteWindow {
       else hideFromTop(this.dropZone);
     };
     on("paste", (event) => {
-      if (this.drawing || this.sending) return;
       const files = [...(event.clipboardData?.files ?? [])].filter((file) =>
         file.type.startsWith("image/"),
       );
       if (!files.length) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      files.forEach((file) => this.add(file));
+      if (this.acceptsFiles()) files.forEach((file) => this.add(file));
     });
     on("dragenter", (event) => {
       if (!carries(event)) return;
       event.stopImmediatePropagation();
-      this.dragging++;
-      showDrop(true);
+      if (this.acceptsFiles()) {
+        this.dragging++;
+        showDrop(true);
+      } else {
+        this.dragging = 0;
+        showDrop(false);
+      }
     });
     on("dragleave", (event) => {
       if (!carries(event)) return;
@@ -819,16 +827,17 @@ export class NoteWindow {
       if (carries(event)) {
         event.preventDefault();
         event.stopImmediatePropagation();
+        if (!this.acceptsFiles()) showDrop(false);
       }
     });
     on("drop", (event) => {
       this.dragging = 0;
       showDrop(false);
       const files = [...(event.dataTransfer?.files ?? [])];
-      if (!files.length) return;
+      if (!files.length && !carries(event)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (!this.drawing && !this.sending) files.forEach((file) => this.add(file));
+      if (this.acceptsFiles()) files.forEach((file) => this.add(file));
     });
     const onResize = () => this.place();
     window.addEventListener("resize", onResize);

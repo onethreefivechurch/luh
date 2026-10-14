@@ -136,6 +136,7 @@ export declare class NoteWindow {
     dispose(): void;
     private visibleDialogs;
     private ownsInput;
+    private acceptsFiles;
     private listen;
     private viewport;
     /** Width on this screen: 400, or the screen less its margins. */

@@ -22,6 +22,7 @@ The feedback journey retains its existing window and image editor. The Uploads d
 - Actual page capture adds a screenshot, and the submission callback receives `page.png` once in `screenshot`, never in `images`.
 - A controlled host callback verifies initial indeterminate progress, a reported 47%, and 100% while Sending remains open. A refused callback retains the text and all queued rows.
 - A later visible ARIA modal blocks feedback's file handling; removing it restores the queue's drop handling and clears the drop overlay.
+- Chromium state fixtures verify sending, capture, drawing and discard confirmation each cancel foreground file-drop navigation without adding files. A later ARIA modal and text-only paste remain untouched; ready foreground feedback resumes accepting files.
 - Light-mode Chromium presentation is inspected at 1440 pixels and with a 390-pixel, DPR 3 mobile viewport. Window sizing uses the document viewport so an overflowing host page cannot push feedback controls offscreen. Mobile viewport emulation verifies layout, not a physical iPhone.
 
 ## Limits

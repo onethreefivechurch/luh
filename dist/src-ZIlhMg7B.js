@@ -3820,7 +3820,10 @@ var jt = [
 		return [...document.querySelectorAll("dialog:modal, [role=\"dialog\"][aria-modal=\"true\"], [role=\"alertdialog\"][aria-modal=\"true\"]")].filter((e) => e.getClientRects().length > 0);
 	}
 	ownsInput() {
-		return !this.isOpen || this.drawing || this.sending || this.capturing || this.confirming ? !1 : this.visibleDialogs().every((e) => this.openingDialogs.has(e) || e.contains(this.root.host));
+		return this.isOpen ? this.visibleDialogs().every((e) => this.openingDialogs.has(e) || e.contains(this.root.host)) : !1;
+	}
+	acceptsFiles() {
+		return !this.drawing && !this.sending && !this.capturing && !this.confirming;
 	}
 	listen() {
 		let e = (e, t) => {
@@ -3832,19 +3835,18 @@ var jt = [
 			this.dropZone.hidden = !e, e ? fe(this.dropZone) : X(this.dropZone);
 		};
 		e("paste", (e) => {
-			if (this.drawing || this.sending) return;
 			let t = [...e.clipboardData?.files ?? []].filter((e) => e.type.startsWith("image/"));
-			t.length && (e.preventDefault(), e.stopImmediatePropagation(), t.forEach((e) => this.add(e)));
+			t.length && (e.preventDefault(), e.stopImmediatePropagation(), this.acceptsFiles() && t.forEach((e) => this.add(e)));
 		}), e("dragenter", (e) => {
-			t(e) && (e.stopImmediatePropagation(), this.dragging++, n(!0));
+			t(e) && (e.stopImmediatePropagation(), this.acceptsFiles() ? (this.dragging++, n(!0)) : (this.dragging = 0, n(!1)));
 		}), e("dragleave", (e) => {
 			t(e) && (this.dragging = Math.max(0, this.dragging - 1), this.dragging || n(!1));
 		}), e("dragover", (e) => {
-			t(e) && (e.preventDefault(), e.stopImmediatePropagation());
+			t(e) && (e.preventDefault(), e.stopImmediatePropagation(), this.acceptsFiles() || n(!1));
 		}), e("drop", (e) => {
 			this.dragging = 0, n(!1);
-			let t = [...e.dataTransfer?.files ?? []];
-			t.length && (e.preventDefault(), e.stopImmediatePropagation(), !this.drawing && !this.sending && t.forEach((e) => this.add(e)));
+			let r = [...e.dataTransfer?.files ?? []];
+			(r.length || t(e)) && (e.preventDefault(), e.stopImmediatePropagation(), this.acceptsFiles() && r.forEach((e) => this.add(e)));
 		});
 		let r = () => this.place();
 		window.addEventListener("resize", r), this.cleanups.push(() => window.removeEventListener("resize", r));
@@ -4253,4 +4255,4 @@ function Ht(e, t = {}) {
 //#endregion
 export { Lt as a, se as c, L as d, z as f, Ht as i, R as l, l as m, Vt as n, Pt as o, u as p, Bt as r, Ft as s, zt as t, I as u };
 
-//# sourceMappingURL=src-CQd0bRfB.js.map
+//# sourceMappingURL=src-ZIlhMg7B.js.map
