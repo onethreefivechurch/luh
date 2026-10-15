@@ -8,10 +8,11 @@ import {
   TAG,
 } from "./index";
 import type { CommentModeElement } from "./index";
+import { captureScreen } from "./capture";
 
 vi.mock("./capture", async (original) => ({
   ...(await original<typeof import("./capture")>()),
-  captureScreen: async () => new Blob(["png"], { type: "image/png" }),
+  captureScreen: vi.fn(),
 }));
 
 function panel(mode: CommentModeElement): ShadowRoot {
@@ -77,6 +78,7 @@ describe("public API", () => {
         screenshot: null,
         images: [],
       }),
+      expect.objectContaining({ onProgress: expect.any(Function) }),
     );
     expect(events).toEqual(["open", "sent", "close"]);
     expect(mode.isOpen).toBe(false);
@@ -213,6 +215,7 @@ describe("public API", () => {
   });
 
   it("keeps a screenshot taken before the pick", async () => {
+    vi.mocked(captureScreen).mockResolvedValue(new File(["png"], "shot.png", { type: "image/png" }));
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:shot");
     const mode = createCommentMode({ pickLabel: "Point at something" });
     const target = document.body.appendChild(document.createElement("button"));
@@ -281,6 +284,20 @@ describe("public API", () => {
     chooser.dispatchEvent(new Event("change"));
     expect(panel(mode).textContent).toContain("example.png");
     expect(panel(mode).querySelector('[aria-label="Draw on example.png"]')).toBeNull();
+  });
+
+  it("disables Add images while a screenshot is being taken", async () => {
+    let release!: (file: File | null) => void;
+    vi.mocked(captureScreen).mockReturnValue(new Promise((resolve) => (release = resolve)));
+    const mode = createCommentMode({});
+    mode.open();
+    const buttons = () => [...panel(mode).querySelectorAll<HTMLButtonElement>("button")];
+    const add = () => buttons().find((button) => button.textContent?.includes(STRINGS.addImages))!;
+    expect(add().disabled).toBe(false);
+    buttons().find((button) => button.textContent?.includes(STRINGS.screenshot))!.click();
+    await vi.waitFor(() => expect(add().disabled).toBe(true));
+    release(null);
+    await vi.waitFor(() => expect(add().disabled).toBe(false));
   });
 
   it("resolves base and exact language maps with per-host word overrides", () => {

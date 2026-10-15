@@ -1,6 +1,6 @@
 import { type Strings } from "./strings";
 import type { IconOverrides } from "./dom";
-import type { Kind, NameField, Via } from "./types";
+import type { Kind, NameField, Via, SubmitProgress } from "./types";
 export declare const IMAGE_TYPES: string[];
 export interface WindowCallbacks {
     /** Label of the in-window pick action; with `pick`, shows the action. */
@@ -41,19 +41,22 @@ export interface WindowCallbacks {
         kind: string | null;
         screenshot: File | null;
         images: File[];
-    }): Promise<string | null>;
+    }, progress: SubmitProgress): Promise<string | null>;
     closed(): void;
     /** Where the pick is now, to sit beside it; null for no pick. */
     anchor(): DOMRect | null;
     /** The button the window opened from, to sit just under it; null for none. */
     opener(): DOMRect | null;
 }
-type Picture = {
-    id: number;
-    file: File;
+type PictureMeta = {
+    [key: string]: unknown;
     url: string;
     taken?: "page" | "element";
     drawn?: boolean;
+};
+type Picture = PictureMeta & {
+    id: string;
+    file: File;
 };
 export declare class NoteWindow {
     private readonly root;
@@ -62,8 +65,10 @@ export declare class NoteWindow {
     private body;
     private nameField;
     private kind;
-    private pictures;
+    private readonly queue;
     private nextId;
+    private uploadPercent;
+    private uploadProgress;
     private sending;
     private capturing;
     private percent;
@@ -78,6 +83,7 @@ export declare class NoteWindow {
     private via;
     private position;
     private dragging;
+    private openingDialogs;
     private cleanups;
     private readonly titleId;
     private title;
@@ -101,10 +107,11 @@ export declare class NoteWindow {
     private dropZone;
     constructor(root: ShadowRoot, host: WindowCallbacks);
     get isOpen(): boolean;
+    private get pictures();
     private icon;
     private toolButton;
-    /** Hides the window while retaining the draft for picking. */
-    suspend(): void;
+    /** Hides the window while keeping the draft and Uppy queue for picking. */
+    suspend(): boolean;
     open(options: {
         via: Via;
         name?: string;
@@ -122,15 +129,24 @@ export declare class NoteWindow {
     private label;
     private row;
     private full;
-    /** Adds a picture, refusing what the site would refuse. */
+    /** Every image source enters the same Uppy queue. No bytes leave before Send. */
     add(file: File, taken?: Picture["taken"]): void;
+    private rejected;
+    /** Validate against the other files before changing anything, preserving the original on refusal. */
+    private replace;
     private remove;
     captureProgress(percent: number): void;
     private screenshot;
     private draw;
     get editing(): boolean;
     private submit;
+    /** Called after close when the controller replaces or disconnects this window. */
+    dispose(): void;
+    private visibleDialogs;
+    private ownsInput;
+    private acceptsFiles;
     private listen;
+    private viewport;
     /** Width on this screen: 400, or the screen less its margins. */
     private width;
     place(): void;

@@ -21,6 +21,7 @@ export type {
   OpenOptions,
   PickedElement,
   SubmitRefusal,
+  SubmitProgress,
   Via,
 } from "./types";
 

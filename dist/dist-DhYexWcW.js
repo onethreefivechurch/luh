@@ -1,4 +1,4 @@
-//#region node_modules/modern-screenshot/dist/index.mjs
+//#region node_modules/.pnpm/modern-screenshot@4.7.0/node_modules/modern-screenshot/dist/index.mjs
 function e(e, t) {
 	return e[13] = 1, e[14] = t >> 8, e[15] = t & 255, e[16] = t >> 8, e[17] = t & 255, e;
 }
@@ -800,4 +800,4 @@ async function nt(t, n) {
 //#endregion
 export { I as createContext, G as destroyContext, nt as domToBlob };
 
-//# sourceMappingURL=dist-B3Z-tFLj.js.map
+//# sourceMappingURL=dist-DhYexWcW.js.map

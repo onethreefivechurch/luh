@@ -4,7 +4,7 @@ import type { CommentModeOptions } from "./types";
 export { CommentModeElement, OWN } from "./element";
 export { MARK_COLOR } from "./capture";
 export { STRINGS, LANGUAGES, resolveStrings, format, type Strings } from "./strings";
-export type { CommentModeOptions, CommentModeEventMap, NameField, Theme, CommentModeState, Kind, Note, NoteContext, OpenOptions, PickedElement, SubmitRefusal, Via, } from "./types";
+export type { CommentModeOptions, CommentModeEventMap, NameField, Theme, CommentModeState, Kind, Note, NoteContext, OpenOptions, PickedElement, SubmitRefusal, SubmitProgress, Via, } from "./types";
 export { NAME } from "./name";
 /** The element's tag: `<luh-notes>`. */
 export declare const TAG = "luh-notes";
