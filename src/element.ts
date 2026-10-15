@@ -295,7 +295,11 @@ export class CommentModeElement extends HTMLElement {
   }
 
   open(options: OpenOptions = {}) {
-    if (this.picking && !options.element) return this.resume();
+    if (this.picking && (!options.element || !this.allowed)) {
+      this.resume();
+      if (!this.allowed) this.active = false;
+      return;
+    }
     if (!this.ready || !this.allowed || (options.element && this.settings.elementPicking === false))
       return;
     if (this.isOpen && !this.picking) {
@@ -341,6 +345,8 @@ export class CommentModeElement extends HTMLElement {
     if (this.picking) {
       this.picking = false;
       this.active = this.pickWasActive;
+      // Pictures taken of the earlier pick no longer match; the person can take them again.
+      this.window.dropTaken();
     }
     this.window.open({
       via: this.via,
@@ -471,7 +477,7 @@ export class CommentModeElement extends HTMLElement {
     if (!this.allowed) {
       if (this.picking) this.resume();
       this.active = false;
-      if (this.isOpen && event.key === "Escape") {
+      if (this.isOpen && !this.window.editing && event.key === "Escape") {
         event.preventDefault();
         event.stopImmediatePropagation();
         this.window.escape();

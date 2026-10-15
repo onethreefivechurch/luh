@@ -225,6 +225,18 @@ describe("public API", () => {
     expect(mode.active).toBe(false);
   });
 
+  it("returns to the draft when permission is lost without configure and the page is clicked", () => {
+    let allowed = true;
+    const mode = createCommentMode({ pickLabel: "Point at something", allowed: () => allowed });
+    const target = document.body.appendChild(document.createElement("button"));
+    mode.open();
+    panel(mode).querySelector<HTMLButtonElement>('[part~="point"]')!.click();
+    allowed = false;
+    mode.open({ element: target });
+    expect(panel(mode).querySelector<HTMLElement>(".cm-window")!.hidden).toBe(false);
+    expect(mode.active).toBe(false);
+  });
+
   it("disables screenshots, picking and drawing while retaining plain notes and uploads", async () => {
     const mode = createCommentMode({ screenshot: false, drawing: false, elementPicking: false });
     const button = document.createElement("button");

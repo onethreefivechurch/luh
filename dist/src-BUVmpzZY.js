@@ -2005,6 +2005,10 @@ var Se = [
 		}, this.icon(e));
 		return i.addEventListener("pointerdown", (e) => e.stopPropagation()), i;
 	}
+	dropTaken() {
+		let e = this.pictures.filter((e) => e.taken && !e.drawn);
+		e.forEach((e) => URL.revokeObjectURL(e.url)), this.pictures = this.pictures.filter((t) => !e.includes(t));
+	}
 	suspend() {
 		this.suspended = !0, Y(this.panel), Y(this.dropZone), this.panel.hidden = !0, this.dropZone.hidden = !0, this.cleanups.forEach((e) => e()), this.cleanups = [];
 	}
@@ -2461,7 +2465,10 @@ var Oe = class extends HTMLElement {
 		}), this.changed();
 	}
 	open(e = {}) {
-		if (this.picking && !e.element) return this.resume();
+		if (this.picking && (!e.element || !this.allowed)) {
+			this.resume(), this.allowed || (this.active = !1);
+			return;
+		}
 		if (!this.ready || !this.allowed || e.element && this.settings.elementPicking === !1) return;
 		if (this.isOpen && !this.picking) {
 			if (this.windowHost.isConnected) return this.window.panel.querySelector("textarea")?.focus();
@@ -2485,7 +2492,7 @@ var Oe = class extends HTMLElement {
 			...s,
 			...i ? { element: I(i, this.strings) } : {},
 			...o ? { selectedText: o } : {}
-		}, this.picking && (this.picking = !1, this.active = this.pickWasActive), this.window.open({
+		}, this.picking && (this.picking = !1, this.active = this.pickWasActive, this.window.dropTaken()), this.window.open({
 			via: this.via,
 			name: i ? F(i, this.strings) : void 0,
 			selectedText: e.selectedText,
@@ -2563,7 +2570,7 @@ var Oe = class extends HTMLElement {
 	}
 	onKey = (e) => {
 		if (!this.allowed) {
-			this.picking && this.resume(), this.active = !1, this.isOpen && e.key === "Escape" && (e.preventDefault(), e.stopImmediatePropagation(), this.window.escape());
+			this.picking && this.resume(), this.active = !1, this.isOpen && !this.window.editing && e.key === "Escape" && (e.preventDefault(), e.stopImmediatePropagation(), this.window.escape());
 			return;
 		}
 		let t = this.settings.key ?? this.getAttribute("key") ?? "c";
@@ -2639,4 +2646,4 @@ function Ne(e, t = {}) {
 //#endregion
 export { Oe as a, ne as c, O as d, A as f, Ne as i, k as l, e as m, Me as n, Te as o, t as p, je as r, Ee as s, Ae as t, D as u };
 
-//# sourceMappingURL=src-CKW4V6r-.js.map
+//# sourceMappingURL=src-BUVmpzZY.js.map
