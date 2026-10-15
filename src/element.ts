@@ -14,6 +14,7 @@ import type {
   Note,
   NoteContext,
   OpenOptions,
+  SubmitProgress,
 } from "./types";
 import { NoteWindow } from "./window";
 
@@ -155,6 +156,7 @@ export class CommentModeElement extends HTMLElement {
       if (this.isConnected) return;
       this.active = false;
       this.window?.close();
+      this.window?.dispose();
       this.themeQuery?.removeEventListener("change", this.onThemeChange);
       this.themeQuery = null;
       window.clearTimeout(this.toastTimer);
@@ -181,6 +183,7 @@ export class CommentModeElement extends HTMLElement {
   // (Re)builds the picker and window with the current words and options.
   private build() {
     this.stale = false;
+    this.window?.dispose();
     const wasActive = this.picker?.active ?? false;
     if (this.picker) this.picker.active = false;
     const { root, windowRoot } = this.shadow();
@@ -227,7 +230,7 @@ export class CommentModeElement extends HTMLElement {
       widen: (delta) => this.widen(delta),
       widenState: () => ({ wider: this.step < this.lineage.length - 1, narrower: this.step > 0 }),
       pickedText: () => this.context?.element?.text ?? "",
-      send: (parts) => this.send(parts),
+      send: (parts, progress) => this.send(parts, progress),
       closed: () => this.closed(),
       opener: () =>
         this.returnFocus?.isConnected ? this.returnFocus.getBoundingClientRect() : null,
@@ -262,18 +265,13 @@ export class CommentModeElement extends HTMLElement {
     return { active: this.active, open: this.isOpen, capturing: this.capturing };
   }
 
-  /**
-   * Opens the note window: on its own (Send feedback), or as a comment on an
-   * element. A dialog the opener sits in hosts the window, so the dialog's
-   * focus trap and outside-click rules leave it working.
-   */
   /** Hides the draft and lets the person pick another part of the page. */
   private point() {
     if (!this.allowed || this.settings.elementPicking === false || !this.isOpen || this.capturing)
       return;
+    if (!this.window.suspend()) return;
     this.pickWasActive = this.active;
     this.picking = true;
-    this.window.suspend();
     this.picker.pin(null);
     this.returnFocus?.focus({ preventScroll: true });
     this.active = true;
@@ -294,8 +292,13 @@ export class CommentModeElement extends HTMLElement {
     this.changed();
   }
 
+  /**
+   * Opens the note window: on its own (Send feedback), or as a comment on an
+   * element. A dialog the opener sits in hosts the window, so the dialog's
+   * focus trap and outside-click rules leave it working.
+   */
   open(options: OpenOptions = {}) {
-    if (this.picking && (!options.element || !this.allowed)) {
+    if (this.picking && (!options.element || !this.allowed || this.settings.elementPicking === false)) {
       this.resume();
       if (!this.allowed) this.active = false;
       return;
@@ -456,12 +459,12 @@ export class CommentModeElement extends HTMLElement {
     kind: string | null;
     screenshot: File | null;
     images: File[];
-  }) {
+  }, progress: SubmitProgress) {
     if (!this.allowed) return this.strings.notAllowed;
     if (!this.context) return this.strings.failed;
     const note: Note = { via: this.via, ...parts, context: this.context };
     const result = this.settings.onSubmit
-      ? await this.settings.onSubmit(note)
+      ? await this.settings.onSubmit(note, progress)
       : await post(this.settings.submitUrl ?? this.getAttribute("submit-url"), note, this.strings);
     if (result && typeof result === "object" && "error" in result)
       return result.error || this.strings.failed;

@@ -51,15 +51,15 @@ export declare class CommentModeElement extends HTMLElement {
     toggle(force?: boolean): void;
     get isOpen(): boolean;
     get state(): CommentModeState;
+    /** Hides the draft and lets the person pick another part of the page. */
+    private point;
+    /** Cancels picking and brings the draft back as it was. */
+    private resume;
     /**
      * Opens the note window: on its own (Send feedback), or as a comment on an
      * element. A dialog the opener sits in hosts the window, so the dialog's
      * focus trap and outside-click rules leave it working.
      */
-    /** Hides the draft and lets the person pick another part of the page. */
-    private point;
-    /** Cancels picking and brings the draft back as it was. */
-    private resume;
     open(options?: OpenOptions): void;
     /** Closes the window, dropping the note. */
     close(): void;
