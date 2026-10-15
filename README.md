@@ -118,6 +118,7 @@ The `browser` entry registers `<luh-notes>`; it does not append a widget. The ma
 | `deactivateOnSubmit` | `true` | Turns comment mode off after the host accepts a note. `false` keeps picking on. Refusals and pending sends retain the mode and draft. |
 | `pickLabel` | Unset | Host-translated in-window Point button; selecting an element retains the draft and images. Escape returns to the draft. |
 | `elementPicking` | `true` | Enables picking by key, `toggle()` or `open({ element })`. Disabling it retains the ordinary note window. |
+| `pickLabel` | None | Words for a window action that hides the draft so another part of the page can be picked; C or Escape returns to the draft. Absent, or with `elementPicking: false`, no action is shown. The `point` part styles it. |
 | `language` | Page language | Language of the widget's labels and its `lang` attribute. |
 | `languages` | English | Host locale dictionaries; every key accepts `Partial<Strings>`. |
 | `strings` | English | Final label overrides, applied after the language map. |
@@ -205,7 +206,7 @@ Public parts remain stable independently of internal CSS class names. Generic pa
 | `luh-notes` | `trigger`, `outline`, `outline-label`, `toast`, `announcement`, `icon`, `icon-pen` |
 | `luh-surface`: window | `window`, `header`, `title`, `scroll`, `form`, `footer`, `move-handle`, `quote`, `kinds`, `kind` |
 | `luh-surface`: fields and text | `field`, `body-field`, `name-field`, `label`, `text`, `small-text`, `fine-print`, `warning`, `error`, `error-message`, `shortcut`, `announcement` |
-| `luh-surface`: buttons | `button`, `icon-button`, `primary`, `quiet`, `danger`, `send`, `cancel`, `close`, `wider`, `narrower`, `screenshot`, `add-images`, `point`, `draw`, `remove-image` |
+| `luh-surface`: buttons | `button`, `icon-button`, `primary`, `quiet`, `danger`, `send`, `cancel`, `close`, `wider`, `narrower`, `screenshot`, `point`, `add-images`, `draw`, `remove-image` |
 | `luh-surface`: pictures | `images`, `image-row`, `image`, `image-name`, `thumbnail`, `image-actions`, `drop-zone` |
 | `luh-surface`: discard | `discard-dialog`, `discard-text`, `keep-editing`, `discard` |
 | `luh-surface`: editor | `editor`, `editor-header`, `editor-footer`, `editor-help`, `tools`, `tool`, `tool-label`, `tool-arrow`, `tool-box`, `tool-text`, `tool-blur`, `tool-crop`, `undo`, `redo`, `delete-mark`, `done`, `editor-cancel`, `editor-remove` |

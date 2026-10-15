@@ -71,10 +71,10 @@ export interface SubmitProgress {
 export type NameField = "off" | "optional" | "required";
 export type Theme = "auto" | "light" | "dark";
 export interface CommentModeOptions {
-    /** In-window picking preserves the draft. Host-translated label; absent disables the action. */
-    pickLabel?: string;
     /** Turns picking off after an accepted send. Default true; false keeps comment mode active. */
     deactivateOnSubmit?: boolean;
+    /** Offers in-window picking while preserving the draft. Host-translated label; absent disables the action. */
+    pickLabel?: string;
     /** Widget palette. Auto follows prefers-color-scheme; host CSS tokens always override colors. */
     theme?: Theme;
     /** Passive SVG factories keyed by icon name. Trusted host code only; nodes are cloned per use. */

@@ -3,7 +3,9 @@ import type { IconOverrides } from "./dom";
 import type { Kind, NameField, Via, SubmitProgress } from "./types";
 export declare const IMAGE_TYPES: string[];
 export interface WindowCallbacks {
+    /** Label of the in-window pick action; with `pick`, shows the action. */
     pickLabel?: string;
+    /** Hands the draft over to picking another part of the page. */
     pick?(): void;
     strings: Strings;
     icons?: IconOverrides;
@@ -92,7 +94,7 @@ export declare class NoteWindow {
     private field;
     private list;
     private screenshotButton;
-    private pickButton;
+    pickButton: HTMLButtonElement | null;
     private suspended;
     private addButton;
     private note;
@@ -108,7 +110,8 @@ export declare class NoteWindow {
     private get pictures();
     private icon;
     private toolButton;
-    setPointAvailable(available: boolean): void;
+    /** Forgets screenshots taken of an earlier pick, keeping uploads and drawn-on pictures. */
+    dropTaken(): void;
     /** Hides the window while keeping the draft and Uppy queue for picking. */
     suspend(): boolean;
     open(options: {

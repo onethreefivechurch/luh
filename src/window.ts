@@ -12,7 +12,9 @@ import type { Kind, NameField, Via, SubmitProgress } from "./types";
 export const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export interface WindowCallbacks {
+  /** Label of the in-window pick action; with `pick`, shows the action. */
   pickLabel?: string;
+  /** Hands the draft over to picking another part of the page. */
   pick?(): void;
   strings: Strings;
   icons?: IconOverrides;
@@ -87,7 +89,7 @@ export class NoteWindow {
   private field: HTMLTextAreaElement;
   private list = h("ul", { class: "cm-images" });
   private screenshotButton: HTMLButtonElement;
-  private pickButton: HTMLButtonElement | null;
+  pickButton: HTMLButtonElement | null = null;
   private suspended = false;
   private addButton: HTMLButtonElement;
   private note = h("p", { class: "cm-small cm-warning" });
@@ -257,9 +259,19 @@ export class NoteWindow {
         strings.discard,
       ),
     );
-    this.pickButton = host.pick ? h("button", {
-      type: "button", class: "cm-button", part: "point", onclick: () => host.pick?.(),
-    }, this.icon("pen"), host.pickLabel) : null;
+    this.pickButton = host.pick
+      ? h(
+          "button",
+          {
+            type: "button",
+            class: "cm-button",
+            part: "point",
+            onclick: () => host.pick?.(),
+          },
+          this.icon("pen"),
+          host.pickLabel,
+        )
+      : null;
     const form = h(
       "div",
       { class: "cm-form" },
@@ -356,8 +368,9 @@ export class NoteWindow {
     return button;
   }
 
-  setPointAvailable(available: boolean) {
-    if (this.pickButton) this.pickButton.hidden = !available;
+  /** Forgets screenshots taken of an earlier pick, keeping uploads and drawn-on pictures. */
+  dropTaken() {
+    this.pictures.filter((picture) => picture.taken && !picture.drawn).forEach((picture) => this.remove(picture.id));
   }
 
   /** Hides the window while keeping the draft and Uppy queue for picking. */
@@ -370,6 +383,8 @@ export class NoteWindow {
     hideFromTop(this.dropZone);
     this.panel.hidden = true;
     this.dropZone.hidden = true;
+    this.cleanups.forEach((cleanup) => cleanup());
+    this.cleanups = [];
     return true;
   }
 

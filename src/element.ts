@@ -55,6 +55,7 @@ export class CommentModeElement extends HTMLElement {
   private step = 0;
   private context: NoteContext | null = null;
   private via: "write" | "pick" = "write";
+  // The draft is hidden while the person points at another part of the page.
   private picking = false;
   private pickWasActive = false;
   private watcher: MutationObserver | null = null;
@@ -106,9 +107,12 @@ export class CommentModeElement extends HTMLElement {
   /** Sets options; may be called again to change them (words, kinds, hooks). */
   configure(options: CommentModeOptions) {
     this.settings = { ...this.settings, ...options };
-    if (this.picking && (!this.allowed || this.settings.elementPicking === false)) this.open();
-    if (!this.allowed || this.settings.elementPicking === false) this.active = false;
-    this.window?.setPointAvailable(this.allowed && this.settings.elementPicking !== false && !!this.settings.pickLabel);
+    const pickable = this.allowed && this.settings.elementPicking !== false;
+    // Losing permission mid-pick returns to the draft, which can still be discarded.
+    if (this.picking && !pickable) this.resume();
+    if (!pickable) this.active = false;
+    if (this.window?.pickButton)
+      this.window.pickButton.hidden = !pickable || !this.settings.pickLabel;
     this.applyTheme();
     this.strings = resolveStrings(
       this.settings.language ?? document.documentElement.lang ?? "en",
@@ -207,7 +211,10 @@ export class CommentModeElement extends HTMLElement {
       );
     this.window = new NoteWindow(windowRoot, {
       pickLabel: this.settings.pickLabel,
-      pick: this.settings.pickLabel && this.settings.elementPicking !== false ? () => this.point() : undefined,
+      pick:
+        this.settings.pickLabel && this.settings.elementPicking !== false
+          ? () => this.point()
+          : undefined,
       icons: this.settings.icons,
       strings: this.strings,
       name: this.settings.name ?? "off",
@@ -258,14 +265,30 @@ export class CommentModeElement extends HTMLElement {
     return { active: this.active, open: this.isOpen, capturing: this.capturing };
   }
 
+  /** Hides the draft and lets the person pick another part of the page. */
   private point() {
-    if (!this.allowed || this.settings.elementPicking === false || !this.isOpen || this.capturing) return;
+    if (!this.allowed || this.settings.elementPicking === false || !this.isOpen || this.capturing)
+      return;
     if (!this.window.suspend()) return;
     this.pickWasActive = this.active;
     this.picking = true;
     this.picker.pin(null);
     this.returnFocus?.focus({ preventScroll: true });
     this.active = true;
+    this.changed();
+  }
+
+  /** Cancels picking and brings the draft back as it was. */
+  private resume() {
+    this.picking = false;
+    this.active = this.pickWasActive;
+    this.picker.pin(this.lineage[this.step]?.element ?? null);
+    this.window.open({
+      via: this.via,
+      name: this.context?.element?.name,
+      selectedText: this.context?.selectedText,
+      pickedText: this.context?.element?.text,
+    });
     this.changed();
   }
 
@@ -276,15 +299,8 @@ export class CommentModeElement extends HTMLElement {
    */
   open(options: OpenOptions = {}) {
     if (this.picking && (!options.element || !this.allowed || this.settings.elementPicking === false)) {
-      this.picking = false;
-      this.active = this.pickWasActive;
-      this.picker.pin(this.lineage[this.step]?.element ?? null);
-      this.window.open({
-        via: this.via, name: this.context?.element?.name,
-        selectedText: this.context?.selectedText, pickedText: this.context?.element?.text,
-      });
-      this.window.setPointAvailable(this.allowed && this.settings.elementPicking !== false && !!this.settings.pickLabel);
-      this.changed();
+      this.resume();
+      if (!this.allowed) this.active = false;
       return;
     }
     if (!this.ready || !this.allowed || (options.element && this.settings.elementPicking === false))
@@ -314,18 +330,26 @@ export class CommentModeElement extends HTMLElement {
     // Only words the person picked travel, shown as a quote; words left
     // selected on the page when Send feedback opens are never sent unseen.
     const selectedText = options.selectedText ?? "";
+    // A repick keeps the page the note began on.
+    const base: NoteContext =
+      this.picking && this.context
+        ? { ...this.context }
+        : pageContext({
+            appVersion: this.settings.appVersion ?? this.getAttribute("app-version") ?? undefined,
+            extra: this.settings.context?.() ?? {},
+            dialog,
+          });
+    delete base.selectedText;
     this.context = {
-      ...(this.picking && this.context ? { ...this.context, selectedText: undefined } : pageContext({
-        appVersion: this.settings.appVersion ?? this.getAttribute("app-version") ?? undefined,
-        extra: this.settings.context?.() ?? {},
-        dialog,
-      })),
+      ...base,
       ...(element ? { element: describe(element, this.strings) } : {}),
       ...(selectedText ? { selectedText } : {}),
     };
     if (this.picking) {
       this.picking = false;
       this.active = this.pickWasActive;
+      // Pictures taken of the earlier pick no longer match; the person can take them again.
+      this.window.dropTaken();
     }
     this.window.open({
       via: this.via,
@@ -454,21 +478,28 @@ export class CommentModeElement extends HTMLElement {
 
   private onKey = (event: KeyboardEvent) => {
     if (!this.allowed) {
-      if (this.picking) this.open();
+      if (this.picking) this.resume();
       this.active = false;
-      if (this.isOpen && event.key === "Escape") {
+      if (this.isOpen && !this.window.editing && event.key === "Escape") {
         event.preventDefault();
         event.stopImmediatePropagation();
         this.window.escape();
       }
       return;
     }
-    const shortcut = this.settings.key ?? this.getAttribute("key") ?? "c";
-    const plain = !event.metaKey && !event.ctrlKey && !event.altKey;
-    if (this.picking && (event.key === "Escape" || (plain && typeof shortcut === "string" && event.key.toLowerCase() === shortcut.toLowerCase()))) {
+    const key = this.settings.key ?? this.getAttribute("key") ?? "c";
+    if (
+      this.picking &&
+      (event.key === "Escape" ||
+        (!event.metaKey &&
+          !event.ctrlKey &&
+          !event.altKey &&
+          typeof key === "string" &&
+          event.key.toLowerCase() === key.toLowerCase()))
+    ) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      this.open();
+      this.resume();
       return;
     }
     if (this.window?.editing) return;
@@ -488,7 +519,7 @@ export class CommentModeElement extends HTMLElement {
       return;
     }
     if (this.capturing) return;
-    const key = this.settings.key ?? this.getAttribute("key") ?? "c";
+    const plain = !event.metaKey && !event.ctrlKey && !event.altKey;
     if (
       key &&
       plain &&
