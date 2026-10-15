@@ -347,13 +347,6 @@ export class NoteWindow {
     return button;
   }
 
-  /** Forgets screenshots taken of an earlier pick, keeping uploads and drawn-on pictures. */
-  dropTaken() {
-    const gone = this.pictures.filter((picture) => picture.taken && !picture.drawn);
-    gone.forEach((picture) => URL.revokeObjectURL(picture.url));
-    this.pictures = this.pictures.filter((picture) => !gone.includes(picture));
-  }
-
   /** Hides the window while retaining the draft for picking. */
   suspend() {
     this.suspended = true;

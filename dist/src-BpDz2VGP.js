@@ -2005,10 +2005,6 @@ var Se = [
 		}, this.icon(e));
 		return i.addEventListener("pointerdown", (e) => e.stopPropagation()), i;
 	}
-	dropTaken() {
-		let e = this.pictures.filter((e) => e.taken && !e.drawn);
-		e.forEach((e) => URL.revokeObjectURL(e.url)), this.pictures = this.pictures.filter((t) => !e.includes(t));
-	}
 	suspend() {
 		this.suspended = !0, Y(this.panel), Y(this.dropZone), this.panel.hidden = !0, this.dropZone.hidden = !0, this.cleanups.forEach((e) => e()), this.cleanups = [];
 	}
@@ -2492,7 +2488,7 @@ var Oe = class extends HTMLElement {
 			...s,
 			...i ? { element: I(i, this.strings) } : {},
 			...o ? { selectedText: o } : {}
-		}, this.picking && (this.picking = !1, this.active = this.pickWasActive, this.window.dropTaken()), this.window.open({
+		}, this.picking && (this.picking = !1, this.active = this.pickWasActive), this.window.open({
 			via: this.via,
 			name: i ? F(i, this.strings) : void 0,
 			selectedText: e.selectedText,
@@ -2646,4 +2642,4 @@ function Ne(e, t = {}) {
 //#endregion
 export { Oe as a, ne as c, O as d, A as f, Ne as i, k as l, e as m, Me as n, Te as o, t as p, je as r, Ee as s, Ae as t, D as u };
 
-//# sourceMappingURL=src-BUVmpzZY.js.map
+//# sourceMappingURL=src-BpDz2VGP.js.map

@@ -9,6 +9,11 @@ import {
 } from "./index";
 import type { CommentModeElement } from "./index";
 
+vi.mock("./capture", async (original) => ({
+  ...(await original<typeof import("./capture")>()),
+  captureScreen: async () => new Blob(["png"], { type: "image/png" }),
+}));
+
 function panel(mode: CommentModeElement): ShadowRoot {
   return document.querySelector<HTMLElement>('[data-luh="window"]')!.shadowRoot!;
 }
@@ -205,6 +210,23 @@ describe("public API", () => {
     mode.open({ element: target });
     expect(panel(mode).querySelector<HTMLTextAreaElement>("textarea")!.value).toBe("Keep this");
     expect(mode.active).toBe(false);
+  });
+
+  it("keeps a screenshot taken before the pick", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:shot");
+    const mode = createCommentMode({ pickLabel: "Point at something" });
+    const target = document.body.appendChild(document.createElement("button"));
+    target.textContent = "Target";
+    const pictures = () => panel(mode).querySelectorAll(".cm-image").length;
+    mode.open();
+    write(mode, "Keep this");
+    panel(mode).querySelector<HTMLButtonElement>('[part~="screenshot"]')!.click();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(pictures()).toBe(1);
+    panel(mode).querySelector<HTMLButtonElement>('[part~="point"]')!.click();
+    mode.open({ element: target });
+    expect(pictures()).toBeGreaterThanOrEqual(1);
+    expect(panel(mode).querySelector<HTMLTextAreaElement>("textarea")!.value).toBe("Keep this");
   });
 
   it("offers no pick action without a label", () => {
