@@ -116,7 +116,6 @@ The `browser` entry registers `<luh-notes>`; it does not append a widget. The ma
 | `screenshot` | `true` | Offers page capture. Disabling it still allows uploading images. |
 | `drawing` | `true` | Offers arrows, boxes, text, blur and crop on images. |
 | `deactivateOnSubmit` | `true` | Turns comment mode off after the host accepts a note. `false` keeps picking on. Refusals and pending sends retain the mode and draft. |
-| `pickLabel` | Unset | Host-translated in-window Point button; selecting an element retains the draft and images. Escape returns to the draft. |
 | `elementPicking` | `true` | Enables picking by key, `toggle()` or `open({ element })`. Disabling it retains the ordinary note window. |
 | `pickLabel` | None | Words for a window action that hides the draft so another part of the page can be picked; C or Escape returns to the draft. Absent, or with `elementPicking: false`, no action is shown. The `point` part styles it. |
 | `language` | Page language | Language of the widget's labels and its `lang` attribute. |
