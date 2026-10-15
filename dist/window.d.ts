@@ -110,8 +110,6 @@ export declare class NoteWindow {
     private get pictures();
     private icon;
     private toolButton;
-    /** Forgets screenshots taken of an earlier pick, keeping uploads and drawn-on pictures. */
-    dropTaken(): void;
     /** Hides the window while keeping the draft and Uppy queue for picking. */
     suspend(): boolean;
     open(options: {

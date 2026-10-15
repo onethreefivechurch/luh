@@ -214,6 +214,24 @@ describe("public API", () => {
     expect(mode.active).toBe(false);
   });
 
+  it("keeps a screenshot taken before the pick", async () => {
+    vi.mocked(captureScreen).mockResolvedValue(new File(["png"], "shot.png", { type: "image/png" }));
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:shot");
+    const mode = createCommentMode({ pickLabel: "Point at something" });
+    const target = document.body.appendChild(document.createElement("button"));
+    target.textContent = "Target";
+    const pictures = () => panel(mode).querySelectorAll(".cm-image").length;
+    mode.open();
+    write(mode, "Keep this");
+    panel(mode).querySelector<HTMLButtonElement>('[part~="screenshot"]')!.click();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(pictures()).toBe(1);
+    panel(mode).querySelector<HTMLButtonElement>('[part~="point"]')!.click();
+    mode.open({ element: target });
+    expect(pictures()).toBeGreaterThanOrEqual(1);
+    expect(panel(mode).querySelector<HTMLTextAreaElement>("textarea")!.value).toBe("Keep this");
+  });
+
   it("offers no pick action without a label", () => {
     const mode = createCommentMode({});
     mode.open();

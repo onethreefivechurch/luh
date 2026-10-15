@@ -348,8 +348,6 @@ export class CommentModeElement extends HTMLElement {
     if (this.picking) {
       this.picking = false;
       this.active = this.pickWasActive;
-      // Pictures taken of the earlier pick no longer match; the person can take them again.
-      this.window.dropTaken();
     }
     this.window.open({
       via: this.via,

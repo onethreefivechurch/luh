@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+
+- Picking another target keeps every image in the draft, including screenshots taken before the pick. Images leave only when the person removes them.
+
 ## 0.4.1
 
 - Optional `pickLabel` adds a window action to point at another part of the page. The draft's text, kind and images stay in the window, and cancelling or denied permission returns to it.

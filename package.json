@@ -1,6 +1,6 @@
 {
   "name": "@onethreefivechurch/luh",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Framework-free feedback: write a note or point at an element, capture and annotate images, deliver to your own backend.",
   "license": "MIT",
   "type": "module",

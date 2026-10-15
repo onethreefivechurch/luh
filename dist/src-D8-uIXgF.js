@@ -12,7 +12,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 async function f(e, t = () => {}) {
 	let n = document.documentElement;
 	try {
-		let { createContext: r, destroyContext: i, domToBlob: a } = await import("./dist-B3Z-tFLj.js");
+		let { createContext: r, destroyContext: i, domToBlob: a } = await import("./dist-DhYexWcW.js");
 		await document.fonts?.ready;
 		let o = [n], s = 0, c = await r(n, {
 			filter: (e) => {
@@ -119,7 +119,7 @@ function _(e, t, n) {
 	});
 }
 //#endregion
-//#region node_modules/@medv/finder/finder.js
+//#region node_modules/.pnpm/@medv+finder@4.0.2/node_modules/@medv/finder/finder.js
 var v = /* @__PURE__ */ new Set([
 	"role",
 	"name",
@@ -1110,7 +1110,7 @@ html.${"luh"}-picking, html.${"luh"}-picking *:not([data-${"luh"}]) {
 }
 `;
 //#endregion
-//#region node_modules/@uppy/core/lib/utils/toError.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/utils/toError.js
 function be(e) {
 	return e instanceof Error || typeof e == "object" && !!e && "message" in e && typeof e.message == "string";
 }
@@ -1118,7 +1118,7 @@ function xe(e) {
 	return be(e) ? e : Error(String(e));
 }
 //#endregion
-//#region node_modules/@uppy/core/lib/utils/getFileNameAndExtension.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/utils/getFileNameAndExtension.js
 function Se(e) {
 	let t = e.lastIndexOf(".");
 	return t === -1 || t === e.length - 1 ? {
@@ -1130,7 +1130,7 @@ function Se(e) {
 	};
 }
 //#endregion
-//#region node_modules/@uppy/core/lib/utils/mimeTypes.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/utils/mimeTypes.js
 var Ce = {
 	__proto__: null,
 	md: "text/markdown",
@@ -1187,14 +1187,14 @@ var Ce = {
 	dmg: "application/x-apple-diskimage"
 };
 //#endregion
-//#region node_modules/@uppy/core/lib/utils/getFileType.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/utils/getFileType.js
 function we(e) {
 	if (e.type) return e.type;
 	let t = e.name ? Se(e.name).extension?.toLowerCase() : null;
 	return t && t in Ce ? Ce[t] : "application/octet-stream";
 }
 //#endregion
-//#region node_modules/@uppy/core/lib/utils/generateFileID.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/utils/generateFileID.js
 function Te(e) {
 	return e.charCodeAt(0).toString(32);
 }
@@ -1224,12 +1224,12 @@ function ke(e, t) {
 	}, t);
 }
 //#endregion
-//#region node_modules/@uppy/core/lib/utils/getErrorMessage.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/utils/getErrorMessage.js
 function Ae(e) {
 	return be(e) ? e.message : String(e);
 }
 //#endregion
-//#region node_modules/@uppy/core/lib/utils/getTimeStamp.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/utils/getTimeStamp.js
 function je(e) {
 	return e < 10 ? `0${e}` : e.toString();
 }
@@ -1238,12 +1238,12 @@ function Me() {
 	return `${je(e.getHours())}:${je(e.getMinutes())}:${je(e.getSeconds())}`;
 }
 //#endregion
-//#region node_modules/@uppy/core/lib/utils/isRestrictionError.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/utils/isRestrictionError.js
 function Ne(e) {
 	return e instanceof Error && "isRestriction" in e && e.isRestriction === !0;
 }
 //#endregion
-//#region node_modules/@uppy/core/lib/utils/Translator.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/utils/Translator.js
 function Pe(e, t, n) {
 	let r = [];
 	return e.forEach((e) => {
@@ -1327,7 +1327,7 @@ function Ve(e, t) {
 	return i >= 3 ? a % 1 == 0 ? `${Math.round(a)} ${o}` : `${a.toFixed(2)} ${o}` : `${a >= 10 || a % 1 == 0 ? Math.round(a) : a.toFixed(1)} ${o}`;
 }
 //#endregion
-//#region node_modules/wildcard/index.js
+//#region node_modules/.pnpm/wildcard@1.1.2/node_modules/wildcard/index.js
 var He = /* @__PURE__ */ o(((e, t) => {
 	function n(e, t) {
 		this.text = e ||= "", this.hasWild = ~e.indexOf("*"), this.separator = t, this.parts = e.split(t);
@@ -1686,12 +1686,12 @@ var He = /* @__PURE__ */ o(((e, t) => {
 	}
 };
 //#endregion
-//#region node_modules/@uppy/core/lib/getFileName.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/getFileName.js
 function pt(e, t) {
 	return t.name ? t.name : e.split("/")[0] === "image" ? `${e.split("/")[0]}.${e.split("/")[1]}` : "noname";
 }
 //#endregion
-//#region node_modules/@uppy/core/lib/locale.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/locale.js
 var mt = { strings: {
 	addBulkFilesFailed: {
 		0: "Failed to add %{smart_count} file due to an internal error",
@@ -1810,7 +1810,7 @@ var mt = { strings: {
 	}
 };
 //#endregion
-//#region node_modules/@uppy/core/lib/supportsUploadProgress.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/supportsUploadProgress.js
 function gt(e) {
 	if (e == null && typeof navigator < "u" && (e = navigator.userAgent), !e) return !0;
 	let t = /Edge\/(\d+\.\d+)/.exec(e);
@@ -1819,7 +1819,7 @@ function gt(e) {
 	return r < 15 || r === 15 && i < 15063 || r > 18 || r === 18 && i >= 18218;
 }
 //#endregion
-//#region node_modules/@uppy/core/lib/Uppy.js
+//#region node_modules/.pnpm/@uppy+core@6.2.0/node_modules/@uppy/core/lib/Uppy.js
 var _t = {
 	totalProgress: 0,
 	allowNewUpload: !0,
@@ -3606,9 +3606,6 @@ var jt = [
 		}, this.icon(e));
 		return i.addEventListener("pointerdown", (e) => e.stopPropagation()), i;
 	}
-	dropTaken() {
-		this.pictures.filter((e) => e.taken && !e.drawn).forEach((e) => this.remove(e.id));
-	}
 	suspend() {
 		return !this.isOpen || !this.acceptsFiles() ? !1 : (this.suspended = !0, this.opening++, this.dragging = 0, X(this.panel), X(this.dropZone), this.panel.hidden = !0, this.dropZone.hidden = !0, this.cleanups.forEach((e) => e()), this.cleanups = [], !0);
 	}
@@ -4153,7 +4150,7 @@ var Lt = class extends HTMLElement {
 			...s,
 			...i ? { element: H(i, this.strings) } : {},
 			...o ? { selectedText: o } : {}
-		}, this.picking && (this.picking = !1, this.active = this.pickWasActive, this.window.dropTaken()), this.window.open({
+		}, this.picking && (this.picking = !1, this.active = this.pickWasActive), this.window.open({
 			via: this.via,
 			name: i ? V(i, this.strings) : void 0,
 			selectedText: e.selectedText,
@@ -4307,4 +4304,4 @@ function Ht(e, t = {}) {
 //#endregion
 export { Lt as a, se as c, L as d, z as f, Ht as i, R as l, l as m, Vt as n, Pt as o, u as p, Bt as r, Ft as s, zt as t, I as u };
 
-//# sourceMappingURL=src-BSj-9E5u.js.map
+//# sourceMappingURL=src-D8-uIXgF.js.map

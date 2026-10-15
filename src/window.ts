@@ -368,11 +368,6 @@ export class NoteWindow {
     return button;
   }
 
-  /** Forgets screenshots taken of an earlier pick, keeping uploads and drawn-on pictures. */
-  dropTaken() {
-    this.pictures.filter((picture) => picture.taken && !picture.drawn).forEach((picture) => this.remove(picture.id));
-  }
-
   /** Hides the window while keeping the draft and Uppy queue for picking. */
   suspend() {
     if (!this.isOpen || !this.acceptsFiles()) return false;
