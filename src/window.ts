@@ -11,6 +11,10 @@ import type { Kind, NameField, Via } from "./types";
 export const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export interface WindowCallbacks {
+  /** Label of the in-window pick action; with `pick`, shows the action. */
+  pickLabel?: string;
+  /** Hands the draft over to picking another part of the page. */
+  pick?(): void;
   strings: Strings;
   icons?: IconOverrides;
   name: NameField;
@@ -80,6 +84,8 @@ export class NoteWindow {
   private field: HTMLTextAreaElement;
   private list = h("ul", { class: "cm-images" });
   private screenshotButton: HTMLButtonElement;
+  pickButton: HTMLButtonElement | null = null;
+  private suspended = false;
   private addButton: HTMLButtonElement;
   private note = h("p", { class: "cm-small cm-warning" });
   private problemLine = h("p", { class: "cm-small cm-error", role: "alert" });
@@ -239,9 +245,23 @@ export class NoteWindow {
         strings.discard,
       ),
     );
+    this.pickButton = host.pick
+      ? h(
+          "button",
+          {
+            type: "button",
+            class: "cm-button",
+            part: "point",
+            onclick: () => host.pick?.(),
+          },
+          this.icon("pen"),
+          host.pickLabel,
+        )
+      : null;
     const form = h(
       "div",
       { class: "cm-form" },
+      this.pickButton,
       this.quote,
       this.kindRow,
       this.field,
@@ -298,7 +318,7 @@ export class NoteWindow {
   }
 
   get isOpen() {
-    return !this.panel.hidden;
+    return !this.panel.hidden || this.suspended;
   }
 
   private icon(name: IconName) {
@@ -327,8 +347,20 @@ export class NoteWindow {
     return button;
   }
 
+  /** Hides the window while retaining the draft for picking. */
+  suspend() {
+    this.suspended = true;
+    hideFromTop(this.panel);
+    hideFromTop(this.dropZone);
+    this.panel.hidden = true;
+    this.dropZone.hidden = true;
+    this.cleanups.forEach((cleanup) => cleanup());
+    this.cleanups = [];
+  }
+
   open(options: { via: Via; name?: string; selectedText?: string; pickedText?: string }) {
     const { strings } = this.host;
+    this.suspended = false;
     this.opening++;
     this.via = options.via;
     this.title.textContent = options.via === "pick" && options.name ? options.name : strings.title;
@@ -354,6 +386,7 @@ export class NoteWindow {
   /** Closes and forgets the note. */
   close() {
     if (!this.isOpen) return;
+    this.suspended = false;
     this.opening++;
     this.editorController?.abort();
     this.editorController = null;
@@ -429,6 +462,7 @@ export class NoteWindow {
     const { strings, kinds } = this.host;
     const placeholder =
       kinds.find((kind) => kind.value === this.kind)?.prompt ?? strings.placeholder;
+    if (this.pickButton) this.pickButton.disabled = this.sending || this.capturing || this.drawing;
     this.field.placeholder = placeholder;
     this.field.disabled = this.sending;
     this.kindRow.hidden = kinds.length === 0;
