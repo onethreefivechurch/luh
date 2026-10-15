@@ -22,6 +22,8 @@ export declare class CommentModeElement extends HTMLElement {
     private step;
     private context;
     private via;
+    private picking;
+    private pickWasActive;
     private watcher;
     private toastTimer;
     private themeQuery;
@@ -54,6 +56,10 @@ export declare class CommentModeElement extends HTMLElement {
      * element. A dialog the opener sits in hosts the window, so the dialog's
      * focus trap and outside-click rules leave it working.
      */
+    /** Hides the draft and lets the person pick another part of the page. */
+    private point;
+    /** Cancels picking and brings the draft back as it was. */
+    private resume;
     open(options?: OpenOptions): void;
     /** Closes the window, dropping the note. */
     close(): void;

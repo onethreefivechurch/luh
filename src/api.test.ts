@@ -186,6 +186,57 @@ describe("public API", () => {
     expect(mode.isOpen).toBe(false);
   });
 
+  it("points at another part of the page without losing the draft", () => {
+    const mode = createCommentMode({ pickLabel: "Point at something" });
+    const target = document.body.appendChild(document.createElement("button"));
+    target.textContent = "Target";
+    const point = () => panel(mode).querySelector<HTMLButtonElement>('[part~="point"]')!;
+    mode.open();
+    write(mode, "Keep this");
+    point().click();
+    expect(mode.isOpen).toBe(true);
+    expect(panel(mode).querySelector<HTMLElement>(".cm-window")!.hidden).toBe(true);
+    expect(mode.active).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(panel(mode).querySelector<HTMLElement>(".cm-window")!.hidden).toBe(false);
+    expect(panel(mode).querySelector<HTMLTextAreaElement>("textarea")!.value).toBe("Keep this");
+    expect(mode.active).toBe(false);
+    point().click();
+    mode.open({ element: target });
+    expect(panel(mode).querySelector<HTMLTextAreaElement>("textarea")!.value).toBe("Keep this");
+    expect(mode.active).toBe(false);
+  });
+
+  it("offers no pick action without a label", () => {
+    const mode = createCommentMode({});
+    mode.open();
+    expect(panel(mode).querySelector('[part~="point"]')).toBeNull();
+  });
+
+  it("returns to the draft and drops the pick action when picking is denied", () => {
+    let allowed = true;
+    const mode = createCommentMode({ pickLabel: "Point at something", allowed: () => allowed });
+    mode.open();
+    panel(mode).querySelector<HTMLButtonElement>('[part~="point"]')!.click();
+    allowed = false;
+    mode.configure({});
+    expect(panel(mode).querySelector<HTMLElement>(".cm-window")!.hidden).toBe(false);
+    expect(panel(mode).querySelector<HTMLElement>('[part~="point"]')!.hidden).toBe(true);
+    expect(mode.active).toBe(false);
+  });
+
+  it("returns to the draft when permission is lost without configure and the page is clicked", () => {
+    let allowed = true;
+    const mode = createCommentMode({ pickLabel: "Point at something", allowed: () => allowed });
+    const target = document.body.appendChild(document.createElement("button"));
+    mode.open();
+    panel(mode).querySelector<HTMLButtonElement>('[part~="point"]')!.click();
+    allowed = false;
+    mode.open({ element: target });
+    expect(panel(mode).querySelector<HTMLElement>(".cm-window")!.hidden).toBe(false);
+    expect(mode.active).toBe(false);
+  });
+
   it("disables screenshots, picking and drawing while retaining plain notes and uploads", async () => {
     const mode = createCommentMode({ screenshot: false, drawing: false, elementPicking: false });
     const button = document.createElement("button");

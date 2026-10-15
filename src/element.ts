@@ -54,6 +54,9 @@ export class CommentModeElement extends HTMLElement {
   private step = 0;
   private context: NoteContext | null = null;
   private via: "write" | "pick" = "write";
+  // The draft is hidden while the person points at another part of the page.
+  private picking = false;
+  private pickWasActive = false;
   private watcher: MutationObserver | null = null;
   private toastTimer = 0;
   private themeQuery: MediaQueryList | null = null;
@@ -103,6 +106,12 @@ export class CommentModeElement extends HTMLElement {
   /** Sets options; may be called again to change them (words, kinds, hooks). */
   configure(options: CommentModeOptions) {
     this.settings = { ...this.settings, ...options };
+    const pickable = this.allowed && this.settings.elementPicking !== false;
+    // Losing permission mid-pick returns to the draft, which can still be discarded.
+    if (this.picking && !pickable) this.resume();
+    if (!pickable) this.active = false;
+    if (this.window?.pickButton)
+      this.window.pickButton.hidden = !pickable || !this.settings.pickLabel;
     this.applyTheme();
     this.strings = resolveStrings(
       this.settings.language ?? document.documentElement.lang ?? "en",
@@ -178,7 +187,7 @@ export class CommentModeElement extends HTMLElement {
     this.picker = new Picker(root, {
       strings: this.strings,
       ignore: this.ignore,
-      paused: () => this.isOpen || this.capturing,
+      paused: () => (this.isOpen && !this.picking) || this.capturing,
       pick: (element, words) => this.open({ element, selectedText: words }),
     });
     const language = this.settings.language ?? document.documentElement.lang ?? "en";
@@ -198,6 +207,11 @@ export class CommentModeElement extends HTMLElement {
         ),
       );
     this.window = new NoteWindow(windowRoot, {
+      pickLabel: this.settings.pickLabel,
+      pick:
+        this.settings.pickLabel && this.settings.elementPicking !== false
+          ? () => this.point()
+          : undefined,
       icons: this.settings.icons,
       strings: this.strings,
       name: this.settings.name ?? "off",
@@ -253,10 +267,42 @@ export class CommentModeElement extends HTMLElement {
    * element. A dialog the opener sits in hosts the window, so the dialog's
    * focus trap and outside-click rules leave it working.
    */
+  /** Hides the draft and lets the person pick another part of the page. */
+  private point() {
+    if (!this.allowed || this.settings.elementPicking === false || !this.isOpen || this.capturing)
+      return;
+    this.pickWasActive = this.active;
+    this.picking = true;
+    this.window.suspend();
+    this.picker.pin(null);
+    this.returnFocus?.focus({ preventScroll: true });
+    this.active = true;
+    this.changed();
+  }
+
+  /** Cancels picking and brings the draft back as it was. */
+  private resume() {
+    this.picking = false;
+    this.active = this.pickWasActive;
+    this.picker.pin(this.lineage[this.step]?.element ?? null);
+    this.window.open({
+      via: this.via,
+      name: this.context?.element?.name,
+      selectedText: this.context?.selectedText,
+      pickedText: this.context?.element?.text,
+    });
+    this.changed();
+  }
+
   open(options: OpenOptions = {}) {
+    if (this.picking && (!options.element || !this.allowed)) {
+      this.resume();
+      if (!this.allowed) this.active = false;
+      return;
+    }
     if (!this.ready || !this.allowed || (options.element && this.settings.elementPicking === false))
       return;
-    if (this.isOpen) {
+    if (this.isOpen && !this.picking) {
       if (this.windowHost.isConnected) return this.window.panel.querySelector("textarea")?.focus();
       this.window.close();
     }
@@ -268,7 +314,7 @@ export class CommentModeElement extends HTMLElement {
           : null
         : (from ?? null);
     const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    this.returnFocus = origin instanceof HTMLElement ? origin : active;
+    if (!this.picking) this.returnFocus = origin instanceof HTMLElement ? origin : active;
     const element = options.element ?? null;
     const dialog = hostDialog(element ?? origin, this.ignore);
     (dialog ?? document.body).append(this.windowHost);
@@ -281,15 +327,27 @@ export class CommentModeElement extends HTMLElement {
     // Only words the person picked travel, shown as a quote; words left
     // selected on the page when Send feedback opens are never sent unseen.
     const selectedText = options.selectedText ?? "";
+    // A repick keeps the page the note began on.
+    const base: NoteContext =
+      this.picking && this.context
+        ? { ...this.context }
+        : pageContext({
+            appVersion: this.settings.appVersion ?? this.getAttribute("app-version") ?? undefined,
+            extra: this.settings.context?.() ?? {},
+            dialog,
+          });
+    delete base.selectedText;
     this.context = {
-      ...pageContext({
-        appVersion: this.settings.appVersion ?? this.getAttribute("app-version") ?? undefined,
-        extra: this.settings.context?.() ?? {},
-        dialog,
-      }),
+      ...base,
       ...(element ? { element: describe(element, this.strings) } : {}),
       ...(selectedText ? { selectedText } : {}),
     };
+    if (this.picking) {
+      this.picking = false;
+      this.active = this.pickWasActive;
+      // Pictures taken of the earlier pick no longer match; the person can take them again.
+      this.window.dropTaken();
+    }
     this.window.open({
       via: this.via,
       name: element ? elementName(element, this.strings) : undefined,
@@ -298,6 +356,7 @@ export class CommentModeElement extends HTMLElement {
     });
     this.picker.pin(element);
     // A dialog that closes takes the window with it.
+    this.watcher?.disconnect();
     this.watcher = new MutationObserver(() => {
       if (!this.windowHost.isConnected) this.window.close();
     });
@@ -312,6 +371,10 @@ export class CommentModeElement extends HTMLElement {
   }
 
   private closed() {
+    if (this.picking) {
+      this.picking = false;
+      this.active = this.isConnected && this.pickWasActive;
+    }
     this.watcher?.disconnect();
     this.watcher = null;
     this.picker.pin(null);
@@ -324,7 +387,7 @@ export class CommentModeElement extends HTMLElement {
     requestAnimationFrame(() => {
       if (target?.isConnected) target.focus({ preventScroll: true });
     });
-    if (this.stale) this.build();
+    if (this.stale && this.isConnected) this.build();
     this.changed();
     this.dispatchEvent(new CustomEvent<CommentModeState>("close", { detail: this.state }));
   }
@@ -412,10 +475,38 @@ export class CommentModeElement extends HTMLElement {
 
   private onKey = (event: KeyboardEvent) => {
     if (!this.allowed) {
+      if (this.picking) this.resume();
       this.active = false;
+      if (this.isOpen && !this.window.editing && event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        this.window.escape();
+      }
+      return;
+    }
+    const key = this.settings.key ?? this.getAttribute("key") ?? "c";
+    if (
+      this.picking &&
+      (event.key === "Escape" ||
+        (!event.metaKey &&
+          !event.ctrlKey &&
+          !event.altKey &&
+          typeof key === "string" &&
+          event.key.toLowerCase() === key.toLowerCase()))
+    ) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this.resume();
       return;
     }
     if (this.window?.editing) return;
+    if (this.picking) {
+      if (this.picker.key(event)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+      return;
+    }
     if (this.isOpen) {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -425,7 +516,6 @@ export class CommentModeElement extends HTMLElement {
       return;
     }
     if (this.capturing) return;
-    const key = this.settings.key ?? this.getAttribute("key") ?? "c";
     const plain = !event.metaKey && !event.ctrlKey && !event.altKey;
     if (
       key &&

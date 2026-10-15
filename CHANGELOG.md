@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- Optional `pickLabel` adds a window action to point at another part of the page. The draft's text, kind and images stay in the window, and cancelling or denied permission returns to it.
+
 ## 0.4.0
 
 - Comment mode turns off after an accepted send by default. `deactivateOnSubmit: false` retains continuous picking.
