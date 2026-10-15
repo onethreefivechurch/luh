@@ -536,7 +536,7 @@ export class NoteWindow {
       ? `${strings.screenshotTaking} ${this.percent}%`
       : strings.screenshot;
     this.screenshotButton.setAttribute("aria-busy", String(this.capturing));
-    this.addButton.disabled = this.sending || this.full();
+    this.addButton.disabled = !this.acceptsFiles() || this.full();
     const note = !this.host.screenshot || hasScreenshot ? null : this.host.screenshotNote();
     this.note.textContent = note ?? "";
     this.note.hidden = !note;
