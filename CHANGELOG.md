@@ -8,7 +8,7 @@
 - `pages` rules turn Luh off on matching pages, or blur every screenshot there whole. `pageMode()` is exported.
 - Redaction is painted into the picture's pixels in the browser, after the page copy's private words are scrambled; a failed redaction produces no screenshot. The preview is the picture that is sent.
 - `blurStrength` (default 12, minimum 6) and `hideColor` settings.
-- Picked and selected words leave out private areas.
+- Picked and selected words leave out private areas; the page title is left out when it repeats a private area's words.
 - The window says how many private areas were covered, and each picture has a **Blur** action that opens the editor with Blur chosen.
 - The library's own `[data-luh]` marker no longer matches `data-luh="blur"` or `"hide"`.
 - Browser tests check the sent PNG by pixels and OCR.

@@ -407,12 +407,13 @@ A string matches the path, with `*` for any run of characters; a string containi
 
 - Private words are scrambled in the copy of the page that is drawn, before any pixel exists, and the area is then painted over in the finished picture: two locks, so a rendering quirk cannot reveal what a missed paint would.
 - A picked element's words leave out its private parts; picking a private area sends no words. Selected words that touch a private area are not sent.
+- The page title is left out when it repeats words from a private area (a page titled with the person it is about), and on blurred pages.
 - If redaction cannot be completed, no screenshot is produced at all.
 - The window says how many private areas were covered, or that the whole page was blurred.
 
 ### Limits
 
-Redaction covers the light DOM of the page. Content inside closed shadow roots, cross-origin frames and canvases cannot be inspected by selector; mark the element that holds them. Blur and hide cover the area on screen when the screenshot is taken; content scrolled into view later is in a later screenshot, redacted then. The page address, the document title and uploaded images are sent as they are: a page whose title or address names a person can use `mode: 'off'`. Luh's checks protect what leaves the browser; who may see a note afterwards is the receiving service's decision.
+Redaction covers the light DOM of the page. Content inside closed shadow roots, cross-origin frames and canvases cannot be inspected by selector; mark the element that holds them. Blur and hide cover the area on screen when the screenshot is taken; content scrolled into view later is in a later screenshot, redacted then. The page address and uploaded images are sent as they are: a page whose address names a person can use `mode: 'off'`. Luh's checks protect what leaves the browser; who may see a note afterwards is the receiving service's decision.
 
 The browser test suite (`npm run test:browser`) draws a page in Chromium, sends a screenshot, and checks the sent PNG by its pixels and by OCR (tesseract) for a marked element, a hidden area, a selector, a typed field and a blurred page, with a readable public line as the control.
 

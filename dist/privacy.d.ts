@@ -60,3 +60,8 @@ export declare function redactImage(blob: Blob, areas: Region[], privacy: Privac
 }, wholePage: boolean): Promise<Blob | null>;
 /** An element's words with every private part left out, as a note may carry them. */
 export declare function publicText(element: Element, privacy: Privacy): string;
+/**
+ * The page title, or "" when it repeats words from a private area (a page
+ * titled with the person it is about) or the page is blurred whole.
+ */
+export declare function publicTitle(title: string, privacy: Privacy, skip: (element: Element) => boolean): string;

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCommentMode, OWN } from "./index";
 import {
   isPrivate,
+  publicTitle,
   pageMode,
   privacyFrom,
   publicText,
@@ -166,5 +167,27 @@ describe("words that travel", () => {
     selection.removeAllRanges();
     selection.addRange(open);
     expect(selectionIsPrivate(privacyFrom({}))).toBe(false);
+  });
+});
+
+describe("the page title", () => {
+  const none = () => false;
+
+  it("is kept when it names nothing private", () => {
+    html(`<p data-luh="blur">SALARY 85000</p>`);
+    expect(publicTitle("Time Tracking — Outport", privacyFrom({}), none)).toBe("Time Tracking — Outport");
+  });
+
+  it("is left out when it repeats a private area's words, either way round", () => {
+    html(`<h1 data-luh="blur">hr.person@example.com</h1>`);
+    expect(publicTitle("Admin - hr.person@example.com — Outport", privacyFrom({}), none)).toBe("");
+    document.body.replaceChildren();
+    html(`<p class="who">Juniper Privatecase, juniper@example.com</p>`);
+    expect(publicTitle("Juniper Privatecase", privacyFrom({ redact: { blur: ".who" } }), none)).toBe("");
+  });
+
+  it("is left out on a blurred page", () => {
+    history.replaceState(null, "", "/people/4");
+    expect(publicTitle("People", privacyFrom({ pages: [{ match: "/people/*", mode: "blur" }] }), none)).toBe("");
   });
 });

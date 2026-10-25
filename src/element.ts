@@ -5,6 +5,7 @@ import {
   pageMode,
   privacyFrom,
   publicText,
+  publicTitle,
   selectionIsPrivate,
   treatment,
   type Privacy,
@@ -374,6 +375,7 @@ export class CommentModeElement extends HTMLElement {
             dialog,
           });
     delete base.selectedText;
+    if (!this.picking) base.title = publicTitle(base.title, this.privacy, (each) => Boolean(each.closest(this.ignore)));
     this.context = {
       ...base,
       ...(element ? { element: this.describe(element) } : {}),

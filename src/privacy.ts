@@ -310,3 +310,22 @@ export function publicText(element: Element, privacy: Privacy): string {
   }
   return parts.join("").replace(/\s+/g, " ").trim();
 }
+
+/**
+ * The page title, or "" when it repeats words from a private area (a page
+ * titled with the person it is about) or the page is blurred whole.
+ */
+export function publicTitle(title: string, privacy: Privacy, skip: (element: Element) => boolean): string {
+  if (pageMode(privacy.pages)) return "";
+  const marked = { ...privacy, maskInputs: false };
+  const selector = [...selectorsFor(marked, "hide"), ...selectorsFor(marked, "blur")].join(", ");
+  const words = [...document.querySelectorAll(selector)]
+    .filter((element) => !skip(element))
+    .map((element) => (element.textContent ?? "").replace(/\s+/g, " ").trim().toLowerCase())
+    .filter((text) => text.length >= 3);
+  if (words.length === 0) return title;
+  const lower = title.toLowerCase();
+  const parts = lower.split(/\s+[-–—|·:]\s+/).map((part) => part.trim()).filter((part) => part.length >= 3);
+  const leaks = words.some((text) => lower.includes(text) || parts.some((part) => text.includes(part)));
+  return leaks ? "" : title;
+}
