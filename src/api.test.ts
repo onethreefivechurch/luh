@@ -215,7 +215,11 @@ describe("public API", () => {
   });
 
   it("keeps a screenshot taken before the pick", async () => {
-    vi.mocked(captureScreen).mockResolvedValue(new File(["png"], "shot.png", { type: "image/png" }));
+    vi.mocked(captureScreen).mockResolvedValue({
+      blob: new File(["png"], "shot.png", { type: "image/png" }),
+      redacted: 0,
+      wholePage: false,
+    });
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:shot");
     const mode = createCommentMode({ pickLabel: "Point at something" });
     const target = document.body.appendChild(document.createElement("button"));
@@ -287,7 +291,7 @@ describe("public API", () => {
   });
 
   it("disables Add images while a screenshot is being taken", async () => {
-    let release!: (file: File | null) => void;
+    let release!: (shot: { blob: Blob; redacted: number; wholePage: boolean } | null) => void;
     vi.mocked(captureScreen).mockReturnValue(new Promise((resolve) => (release = resolve)));
     const mode = createCommentMode({});
     mode.open();

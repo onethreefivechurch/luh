@@ -209,9 +209,10 @@ input.cm-field { min-height: var(--cm-control); height: var(--cm-control); paddi
 .cm-images { list-style: none; margin: 0; padding: 0; border: 1px solid var(--cm-border); border-radius: 8px; }
 .cm-image { display: flex; align-items: center; gap: 8px; padding: 6px 4px 6px 6px; }
 .cm-image + .cm-image { border-top: 1px solid var(--cm-border); }
+.cm-image .cm-button { padding-inline: 8px; }
 .cm-thumb { padding: 0; border: 1px solid var(--cm-border); border-radius: 6px; background: var(--cm-raised); cursor: pointer; flex: none; overflow: hidden; }
 .cm-thumb img { display: block; width: 40px; height: 40px; object-fit: cover; object-position: top; }
-.cm-image-name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.cm-image-name { flex: 1; min-width: 5.5em; overflow-wrap: anywhere; font-weight: 500; }
 .cm-picture-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .cm-button {
   display: inline-flex;
@@ -239,6 +240,7 @@ input.cm-field { min-height: var(--cm-control); height: var(--cm-control); paddi
 .cm-window progress { width: 100%; accent-color: var(--cm-accent); }
 .cm-small { margin: -6px 0 0; color: var(--cm-muted); font-size: 13px; line-height: 18px; }
 .cm-warning { margin: 0; color: var(--cm-warning); }
+.cm-covered { margin: 0; }
 .cm-error { margin: 0; color: var(--cm-danger); }
 .cm-error-box {
   margin: 0;

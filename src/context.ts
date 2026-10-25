@@ -64,9 +64,11 @@ const typed = (element: Element) => element.matches("input, textarea, select");
 const squash = (text: string | null | undefined) => (text ?? "").replace(/\s+/g, " ").trim();
 
 /** A short name for an element, as the picker and the window show it: Button “Save”. */
-export function elementName(element: Element, strings: Strings): string {
+export function elementName(element: Element, strings: Strings, words?: string): string {
   const label =
-    element.getAttribute("aria-label") ?? (typed(element) ? "" : squash(element.textContent));
+    words !== undefined
+      ? squash(words)
+      : (element.getAttribute("aria-label") ?? (typed(element) ? "" : squash(element.textContent)));
   const role = element.getAttribute("role");
   const kind = role
     ? strings[ROLES[role.toLowerCase()] ?? "area"]
@@ -76,7 +78,7 @@ export function elementName(element: Element, strings: Strings): string {
 }
 
 /** The element as a note records it: a selector that finds it again, and its words. */
-export function describe(element: Element, strings: Strings): PickedElement {
+export function describe(element: Element, strings: Strings, words?: string): PickedElement {
   let selector = "";
   try {
     // Stable names first: test ids, roles, labels and hand-written ids. Ids
@@ -95,11 +97,14 @@ export function describe(element: Element, strings: Strings): PickedElement {
     selector: selector.slice(0, 1000),
     id: element.id.slice(0, 300),
     // Typed words stay out: a field may hold someone's details.
-    text: typed(element)
-      ? (element.getAttribute("aria-label") ?? "").slice(0, 300)
-      : squash(element.textContent).slice(0, 300),
+    text:
+      words !== undefined
+        ? squash(words).slice(0, 300)
+        : typed(element)
+          ? (element.getAttribute("aria-label") ?? "").slice(0, 300)
+          : squash(element.textContent).slice(0, 300),
     role: element.getAttribute("role") ?? element.tagName.toLowerCase(),
-    name: elementName(element, strings),
+    name: elementName(element, strings, words),
   };
 }
 

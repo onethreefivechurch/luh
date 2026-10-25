@@ -1,1 +1,1 @@
-export { a as CommentModeElement, l as LANGUAGES, p as MARK_COLOR, m as NAME, o as OWN, c as PARTS, u as STRINGS, s as SURFACE_TAG, t as TAG, n as createCommentMode, r as defineCommentMode, i as elementName, d as format, f as resolveStrings } from "./src-D8-uIXgF.js";
+export { a as CommentModeElement, l as LANGUAGES, p as MARK_COLOR, h as NAME, o as OWN, c as PARTS, u as STRINGS, s as SURFACE_TAG, t as TAG, n as createCommentMode, r as defineCommentMode, i as elementName, d as format, m as pageMode, f as resolveStrings } from "./src-D6Xq4VPl.js";

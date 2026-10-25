@@ -32,6 +32,11 @@ export declare const STRINGS: {
     elementImageName: string;
     draw: string;
     drawOn: string;
+    blurMore: string;
+    blurMoreOn: string;
+    coveredOne: string;
+    coveredMany: string;
+    coveredPage: string;
     removeNamed: string;
     tooMany: string;
     wrongImage: string;

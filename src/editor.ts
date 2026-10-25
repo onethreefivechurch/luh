@@ -49,6 +49,7 @@ export function openEditor(
   mount: Node,
   signal?: AbortSignal,
   icons?: IconOverrides,
+  start: Tool = "arrow",
 ): Promise<EditorResult> {
   if (signal?.aborted) return Promise.resolve({ action: "cancel" });
   const icon = (name: IconName) => renderIcon(name, icons);
@@ -57,7 +58,7 @@ export function openEditor(
     const url = URL.createObjectURL(file);
     const image = new Image();
     let size = { width: 0, height: 0 };
-    let tool: Tool = "arrow";
+    let tool: Tool = start;
     const history = new History({ marks: [], crop: null });
     let selected: number | null = null;
     let gesture: Gesture | null = null;

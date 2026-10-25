@@ -1,9 +1,9 @@
 import { type Strings } from "./strings";
 import type { NoteContext, PickedElement } from "./types";
 /** A short name for an element, as the picker and the window show it: Button “Save”. */
-export declare function elementName(element: Element, strings: Strings): string;
+export declare function elementName(element: Element, strings: Strings, words?: string): string;
 /** The element as a note records it: a selector that finds it again, and its words. */
-export declare function describe(element: Element, strings: Strings): PickedElement;
+export declare function describe(element: Element, strings: Strings, words?: string): PickedElement;
 /** The dialog's title, from aria-labelledby or aria-label, or undefined. */
 export declare function dialogTitle(dialog: Element | null | undefined): string | undefined;
 /** The open modal dialog an element sits in, or the topmost open one. */
