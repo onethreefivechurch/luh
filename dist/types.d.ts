@@ -70,6 +70,24 @@ export interface SubmitProgress {
 }
 export type NameField = "off" | "optional" | "required";
 export type Theme = "auto" | "light" | "dark";
+/**
+ * A page where Luh behaves differently. `match` is a pattern for the path
+ * (`*` matches anything; a pattern with `://` is matched against the whole
+ * address), a regular expression tested against the whole address, or a
+ * function given the address. `off`: Luh does not open there. `blur`: every
+ * screenshot there is blurred whole and picked words are not sent.
+ */
+export interface PageRule {
+    match: string | RegExp | ((url: URL) => boolean);
+    mode: "off" | "blur";
+}
+/** CSS selectors for areas a host cannot mark in its markup. */
+export interface Redactions {
+    /** Words unreadable, layout kept. */
+    blur?: string | string[];
+    /** The whole area blanked. */
+    hide?: string | string[];
+}
 export interface CommentModeOptions {
     /** Turns picking off after an accepted send. Default true; false keeps comment mode active. */
     deactivateOnSubmit?: boolean;
@@ -105,6 +123,18 @@ export interface CommentModeOptions {
     key?: string | false;
     /** Elements that are never picked and never appear in a screenshot. */
     ignore?: string;
+    /** The attribute that marks private areas: `="blur"` or `="hide"`, inherited by children. Default "data-luh". */
+    privacyAttribute?: string;
+    /** Selectors to blur or hide in every screenshot, for markup the host cannot change. */
+    redact?: Redactions;
+    /** Hide what is typed or chosen in fields (inputs, text areas, choices, editable text). Default true. */
+    maskInputs?: boolean;
+    /** Size of the blur's squares in CSS pixels. Default 12; never less than 6. */
+    blurStrength?: number;
+    /** The colour painted over hidden areas. Default "#d4d4d8". */
+    hideColor?: string;
+    /** Pages where Luh is off, or where every screenshot is blurred. First match wins. */
+    pages?: PageRule[];
     appVersion?: string;
     /** Extra details recorded with every note, read as the window opens. */
     context?: () => Record<string, string>;

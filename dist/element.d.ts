@@ -1,6 +1,7 @@
+import { type Privacy } from "./privacy";
 import type { CommentModeEventMap, CommentModeOptions, CommentModeState, OpenOptions } from "./types";
-/** Marks the library's own elements: never picked, never in a screenshot. */
-export declare const OWN = "[data-luh]";
+/** Marks the library's own elements: never picked, never in a screenshot. Privacy marks share the name. */
+export declare const OWN = "[data-luh]:not([data-luh=\"blur\"]):not([data-luh=\"hide\"])";
 /** Public detached host for window and editor shadow parts. */
 export declare const SURFACE_TAG = "luh-surface";
 export declare class CommentModeElement extends HTMLElement {
@@ -18,6 +19,7 @@ export declare class CommentModeElement extends HTMLElement {
     private returnFocus;
     private lineage;
     private shot;
+    private covered;
     private stale;
     private step;
     private context;
@@ -37,6 +39,10 @@ export declare class CommentModeElement extends HTMLElement {
     get allowed(): boolean;
     /** Sets options; may be called again to change them (words, kinds, hooks). */
     configure(options: CommentModeOptions): this;
+    /** The privacy settings in force, every default filled in. */
+    get privacy(): Privacy;
+    /** The element as a note may describe it: private words left out. */
+    private describe;
     get options(): Readonly<CommentModeOptions>;
     /** Elements never picked and never in a screenshot: the site's and the library's own. */
     get ignore(): string;

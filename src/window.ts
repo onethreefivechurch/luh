@@ -8,6 +8,7 @@ import { apple, finePointer, h, icon as renderIcon, showOnTop, hideFromTop } fro
 import { format, type Strings } from "./strings";
 import type { IconName, IconOverrides } from "./dom";
 import type { Kind, NameField, Via, SubmitProgress } from "./types";
+import type { Tool } from "./drawing";
 
 export const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
@@ -30,6 +31,8 @@ export interface WindowCallbacks {
   /** The last screenshot marked again for the pick as it now is, or null without one. */
   remark(): Promise<{ page: File | null; element: File | null } | null>;
   screenshotNote(): string | null;
+  /** What the screenshot had painted over: how many private areas, or the whole page. */
+  covered(): { count: number; wholePage: boolean } | null;
   /** Widen (+1) or narrow (-1) the pick; returns the new pick's name. */
   widen(delta: number): string | null;
   widenState(): { wider: boolean; narrower: boolean };
@@ -93,6 +96,7 @@ export class NoteWindow {
   private suspended = false;
   private addButton: HTMLButtonElement;
   private note = h("p", { class: "cm-small cm-warning" });
+  private coveredLine = h("p", { class: "cm-small cm-covered", part: "covered" });
   private problemLine = h("p", { class: "cm-small cm-error", role: "alert" });
   private errorLine = h("p", { class: "cm-error-box", role: "alert" });
   private sendButton: HTMLButtonElement;
@@ -289,6 +293,7 @@ export class NoteWindow {
           ),
       this.errorLine,
       this.list,
+      this.coveredLine,
       h("div", { class: "cm-picture-actions" }, this.screenshotButton, this.addButton),
       // A phone has nothing to drag.
       finePointer() ? h("p", { class: "cm-small" }, strings.dropHint) : null,
@@ -550,6 +555,18 @@ export class NoteWindow {
     const note = !this.host.screenshot || hasScreenshot ? null : this.host.screenshotNote();
     this.note.textContent = note ?? "";
     this.note.hidden = !note;
+    const covered = hasScreenshot ? this.host.covered() : null;
+    const coveredWords = !covered
+      ? ""
+      : covered.wholePage
+        ? strings.coveredPage
+        : covered.count === 1
+          ? strings.coveredOne
+          : covered.count > 1
+            ? format(strings.coveredMany, { number: covered.count })
+            : "";
+    this.coveredLine.textContent = coveredWords;
+    this.coveredLine.hidden = !coveredWords;
     this.problemLine.textContent = this.problem ?? "";
     this.problemLine.hidden = !this.problem;
     this.errorLine.textContent = this.error ?? "";
@@ -589,6 +606,7 @@ export class NoteWindow {
     const { strings } = this.host;
     const name = this.label(picture);
     const draw = () => void this.draw(picture);
+    const blur = () => void this.draw(picture, "blur");
     return h(
       "li",
       { class: "cm-image" },
@@ -611,6 +629,21 @@ export class NoteWindow {
             },
             this.icon("pen"),
             h("span", {}, strings.draw),
+          )
+        : null,
+      this.host.drawing
+        ? h(
+            "button",
+            {
+              type: "button",
+              class: "cm-button cm-quiet",
+              part: "blur-more",
+              "aria-label": format(strings.blurMoreOn, { name }),
+              disabled: this.sending,
+              onclick: blur,
+            },
+            this.icon("blur"),
+            h("span", {}, strings.blurMore),
           )
         : null,
       h(
@@ -716,7 +749,7 @@ export class NoteWindow {
     this.list.querySelector<HTMLButtonElement>(".cm-image .cm-button")?.focus();
   }
 
-  private async draw(picture: Picture) {
+  private async draw(picture: Picture, start: Tool = "arrow") {
     if (!this.host.drawing || this.panel.hidden || !this.acceptsFiles()) return;
     const opening = this.opening;
     this.drawing = true;
@@ -728,6 +761,7 @@ export class NoteWindow {
       this.root,
       controller.signal,
       this.host.icons,
+      start,
     );
     if (opening !== this.opening || !this.isOpen) return;
     this.editorController = null;

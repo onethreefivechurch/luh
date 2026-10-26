@@ -8,6 +8,7 @@ import type { CommentModeOptions } from "./types";
 
 export { CommentModeElement, OWN } from "./element";
 export { MARK_COLOR } from "./capture";
+export { pageMode } from "./privacy";
 export { STRINGS, LANGUAGES, resolveStrings, format, type Strings } from "./strings";
 export type {
   CommentModeOptions,
@@ -19,7 +20,9 @@ export type {
   Note,
   NoteContext,
   OpenOptions,
+  PageRule,
   PickedElement,
+  Redactions,
   SubmitRefusal,
   SubmitProgress,
   Via,

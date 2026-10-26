@@ -27,6 +27,11 @@ export interface WindowCallbacks {
         element: File | null;
     } | null>;
     screenshotNote(): string | null;
+    /** What the screenshot had painted over: how many private areas, or the whole page. */
+    covered(): {
+        count: number;
+        wholePage: boolean;
+    } | null;
     /** Widen (+1) or narrow (-1) the pick; returns the new pick's name. */
     widen(delta: number): string | null;
     widenState(): {
@@ -98,6 +103,7 @@ export declare class NoteWindow {
     private suspended;
     private addButton;
     private note;
+    private coveredLine;
     private problemLine;
     private errorLine;
     private sendButton;

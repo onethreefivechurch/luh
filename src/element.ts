@@ -1,7 +1,16 @@
 // The element (`<luh-notes>`, from NAME): the one controller. It owns the picker, the note window and
 // the screenshot, and hands every note to the site's one hook.
 import { captureScreen, cropTo, outline } from "./capture";
-import { describe, elementName, hostDialog, pageContext } from "./context";
+import {
+  pageMode,
+  privacyFrom,
+  publicText,
+  publicTitle,
+  selectionIsPrivate,
+  treatment,
+  type Privacy,
+} from "./privacy";
+import { describe, hostDialog, pageContext } from "./context";
 import { h, hideFromTop, icon, showOnTop } from "./dom";
 import { NAME } from "./name";
 import { Picker, typing } from "./picker";
@@ -18,8 +27,8 @@ import type {
 } from "./types";
 import { NoteWindow } from "./window";
 
-/** Marks the library's own elements: never picked, never in a screenshot. */
-export const OWN = `[data-${NAME}]`;
+/** Marks the library's own elements: never picked, never in a screenshot. Privacy marks share the name. */
+export const OWN = `[data-${NAME}]:not([data-${NAME}="blur"]):not([data-${NAME}="hide"])`;
 
 /** Public detached host for window and editor shadow parts. */
 export const SURFACE_TAG = `${NAME}-surface`;
@@ -50,6 +59,8 @@ export class CommentModeElement extends HTMLElement {
   private lineage: { element: Element; bounds: DOMRect }[] = [];
   // The last screenshot as taken, so Wider and Narrower re-mark it.
   private shot: { raw: Blob; viewport: { width: number; height: number } } | null = null;
+  // What the last screenshot had painted over, for the line beside it.
+  private covered: { count: number; wholePage: boolean } | null = null;
   // Options changed while a note was open wait until it closes.
   private stale = false;
   private step = 0;
@@ -96,6 +107,7 @@ export class CommentModeElement extends HTMLElement {
   /** Current host permission. Callback failures fail closed. */
   get allowed(): boolean {
     try {
+      if (pageMode(this.privacy.pages) === "off") return false;
       return typeof this.settings.allowed === "function"
         ? this.settings.allowed()
         : this.settings.allowed !== false;
@@ -123,6 +135,22 @@ export class CommentModeElement extends HTMLElement {
     if (this.ready && this.isOpen) this.stale = true;
     else if (this.ready) this.build();
     return this;
+  }
+
+  /** The privacy settings in force, every default filled in. */
+  get privacy(): Privacy {
+    return privacyFrom(this.settings);
+  }
+
+  /** The element as a note may describe it: private words left out. */
+  private describe(element: Element) {
+    const privacy = this.privacy;
+    const marked = treatment(element, { ...privacy, maskInputs: false });
+    const field = element.matches("input, textarea, select");
+    // A field is described by its label, never its value, as before.
+    const words =
+      pageMode(privacy.pages) || marked ? "" : field ? undefined : publicText(element, privacy);
+    return describe(element, this.strings, words);
   }
 
   get options(): Readonly<CommentModeOptions> {
@@ -227,6 +255,7 @@ export class CommentModeElement extends HTMLElement {
       maxImageBytes: this.settings.maxImageBytes ?? 10 * 1024 * 1024,
       capture: () => this.capture(),
       screenshotNote: () => this.settings.screenshotNote?.() ?? null,
+      covered: () => this.covered,
       widen: (delta) => this.widen(delta),
       widenState: () => ({ wider: this.step < this.lineage.length - 1, narrower: this.step > 0 }),
       pickedText: () => this.context?.element?.text ?? "",
@@ -329,7 +358,13 @@ export class CommentModeElement extends HTMLElement {
     this.via = element ? "pick" : "write";
     // Only words the person picked travel, shown as a quote; words left
     // selected on the page when Send feedback opens are never sent unseen.
-    const selectedText = options.selectedText ?? "";
+    const selectedText =
+      options.selectedText &&
+      !selectionIsPrivate(this.privacy) &&
+      !(element && pageMode(this.privacy.pages)) &&
+      !(element && treatment(element, this.privacy))
+        ? options.selectedText
+        : "";
     // A repick keeps the page the note began on.
     const base: NoteContext =
       this.picking && this.context
@@ -340,9 +375,10 @@ export class CommentModeElement extends HTMLElement {
             dialog,
           });
     delete base.selectedText;
+    if (!this.picking) base.title = publicTitle(base.title, this.privacy, (each) => Boolean(each.closest(this.ignore)));
     this.context = {
       ...base,
-      ...(element ? { element: describe(element, this.strings) } : {}),
+      ...(element ? { element: this.describe(element) } : {}),
       ...(selectedText ? { selectedText } : {}),
     };
     if (this.picking) {
@@ -351,8 +387,8 @@ export class CommentModeElement extends HTMLElement {
     }
     this.window.open({
       via: this.via,
-      name: element ? elementName(element, this.strings) : undefined,
-      selectedText: options.selectedText,
+      name: element ? this.context.element?.name : undefined,
+      selectedText: selectedText || undefined,
       pickedText: this.context.element?.text,
     });
     this.picker.pin(element);
@@ -381,6 +417,7 @@ export class CommentModeElement extends HTMLElement {
     this.picker.pin(null);
     this.lineage = [];
     this.shot = null;
+    this.covered = null;
     this.context = null;
     document.body.append(this.windowHost);
     const target = this.returnFocus;
@@ -397,9 +434,9 @@ export class CommentModeElement extends HTMLElement {
     this.step = Math.max(0, Math.min(this.lineage.length - 1, this.step + delta));
     const element = this.lineage[this.step]?.element;
     if (!element || !this.context) return null;
-    this.context = { ...this.context, element: describe(element, this.strings) };
+    this.context = { ...this.context, element: this.describe(element) };
     this.picker.pin(element);
-    return elementName(element, this.strings);
+    return this.context.element!.name;
   }
 
   /** Where a lineage entry sits now, or where it last sat if it has left the page. */
@@ -420,12 +457,13 @@ export class CommentModeElement extends HTMLElement {
     // Measured as the picture is taken, since the page may have scrolled.
     this.lineage.forEach((entry) => this.where(entry));
     try {
-      const raw = await captureScreen(this.ignore, (percent) =>
+      const shot = await captureScreen(this.ignore, this.privacy, (percent) =>
         this.window.captureProgress(percent),
       );
-      if (!raw || this.context !== context || sequence !== this.captureSequence)
+      if (!shot || this.context !== context || sequence !== this.captureSequence)
         return { page: null, element: null };
-      this.shot = { raw, viewport };
+      this.shot = { raw: shot.blob, viewport };
+      this.covered = { count: shot.redacted, wholePage: shot.wholePage };
       return await this.marked();
     } finally {
       if (sequence === this.captureSequence) {

@@ -1,4 +1,5 @@
 import { NAME } from "./name";
+import { pageMode, redactImage, regions, scrub, treatment, type Privacy } from "./privacy";
 
 // The page screenshot, drawn in the browser by modern-screenshot from the
 // page as it is, with the library's own windows and the site's `ignore`
@@ -14,12 +15,26 @@ type Size = { width: number; height: number };
 // bytes between captures, without caching any page pixels or private words.
 const embeddedFonts = new Map<string, string>();
 
+/** A screenshot with its private areas already painted over, and how many there were. */
+export interface Capture {
+  blob: Blob;
+  redacted: number;
+  wholePage: boolean;
+}
+
 export async function captureScreen(
   ignore: string,
+  privacy: Privacy,
   progress: (percent: number) => void = () => {},
-): Promise<Blob | null> {
+): Promise<Capture | null> {
   const root = document.documentElement;
   try {
+    const mode = pageMode(privacy.pages);
+    if (mode === "off") return null;
+    const wholePage = mode === "blur";
+    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    // Measured from the page itself, at the moment of capture.
+    const areas = regions(privacy, (element) => Boolean(element.closest(ignore)));
     const { createContext, destroyContext, domToBlob } = await import("modern-screenshot");
     // Font embedding must use the same metrics as the measured page.
     await document.fonts?.ready;
@@ -56,6 +71,10 @@ export async function captureScreen(
         }
         // Left out, but keeping its box so nothing around it moves.
         if (original.matches(ignore)) node.style.opacity = "0";
+        // Private words never reach the picture, even before the paint over them.
+        const kind = wholePage && original === root ? "blur" : treatment(original, privacy);
+        const parent = original.parentElement;
+        if (kind && (!parent || treatment(parent, privacy) !== kind)) scrub(node, kind);
         if (node instanceof HTMLImageElement && original instanceof HTMLImageElement) {
           inlineLoadedImage(original, node);
         }
@@ -90,9 +109,11 @@ export async function captureScreen(
     });
     context.fontCssTexts = new Map(embeddedFonts);
     try {
-      const blob = await domToBlob(context);
+      const shot = await domToBlob(context);
+      const blob = await redactImage(shot, areas, privacy, viewport, wholePage);
+      if (!blob) return null;
       progress(100);
-      return blob;
+      return { blob, redacted: areas.length, wholePage };
     } finally {
       context.fontCssTexts.forEach((css, rule) => embeddedFonts.set(rule, css));
       destroyContext(context);
