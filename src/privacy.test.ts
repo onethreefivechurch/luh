@@ -130,11 +130,12 @@ describe("words that travel", () => {
     const root = html(`<div id="c" title="Jane">Jane Doe <input value="85000"><img src="a.png"></div>`);
     const clone = root.querySelector("#c")!.cloneNode(true) as HTMLElement;
     scrub(clone, "hide");
-    expect(clone.textContent).toBe("xxxx xxx ");
-    expect(clone.querySelector("input")!.value).toBe("xxxxx");
+    expect(clone.textContent).toBe("Xxxx Xxx ");
+    expect(clone.querySelector("input")!.value).toBe("00000");
     expect(clone.querySelector("img")).toBeNull();
     expect(clone.getAttribute("title")).toBeNull();
     expect(scramble("a b\nc")).toBe("x x\nx");
+    expect(scramble("Jane.Doe@example.com 709-555-0142 Zoë")).toBe("Xxxx.Xxx@xxxxxxx.xxx 000-000-0000 Xxx");
   });
 
   it("sends no private words when the person picks a marked area", async () => {

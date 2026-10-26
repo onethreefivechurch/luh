@@ -110,15 +110,23 @@ function te(e) {
 		n.selectNodeContents(e), t.push(n.getBoundingClientRect());
 	} catch {}
 	let n = t.filter((e) => e.width > 0 || e.height > 0);
-	return n.length === 0 ? null : {
+	if (n.length === 0) return null;
+	let r = {
 		left: Math.min(...n.map((e) => e.left)),
 		top: Math.min(...n.map((e) => e.top)),
 		right: Math.max(...n.map((e) => e.right)),
 		bottom: Math.max(...n.map((e) => e.bottom))
 	};
+	for (let t = e; t && t !== document.documentElement; t = t.parentElement) {
+		let e = getComputedStyle(t);
+		if (e.overflowX === "visible" && e.overflowY === "visible") continue;
+		let n = t.getBoundingClientRect();
+		e.overflowX !== "visible" && (r.left = Math.max(r.left, n.left), r.right = Math.min(r.right, n.right)), e.overflowY !== "visible" && (r.top = Math.max(r.top, n.top), r.bottom = Math.min(r.bottom, n.bottom));
+	}
+	return r.right > r.left && r.bottom > r.top ? r : null;
 }
 function b(e) {
-	return e.replace(/\S/g, "x");
+	return e.replace(/[\p{L}\p{M}\p{N}]/gu, (e) => /\p{N}/u.test(e) ? "0" : /\p{Lu}/u.test(e) ? "X" : "x");
 }
 function x(e, t) {
 	let n = e.ownerDocument.createTreeWalker(e, NodeFilter.SHOW_TEXT);
@@ -4536,4 +4544,4 @@ function sn(e, t = {}) {
 //#endregion
 export { tn as a, Se as c, G as d, K as f, l as h, sn as i, fe as l, m, on as n, Qt as o, T as p, an as r, $t as s, rn as t, W as u };
 
-//# sourceMappingURL=src-D3El8gp2.js.map
+//# sourceMappingURL=src-B3G8pOOF.js.map

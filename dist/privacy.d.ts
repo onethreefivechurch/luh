@@ -34,7 +34,11 @@ export declare function isPrivate(element: Element, privacy: Privacy): boolean;
 export declare function selectionIsPrivate(privacy: Privacy, selection?: Selection | null): boolean;
 /** Every marked element on screen, each with the area it covers, words that spill out included. */
 export declare function regions(privacy: Privacy, skip: (element: Element) => boolean): Region[];
-/** Every letter and digit becomes "x": the shape of the words, none of the words. */
+/**
+ * Letters become x or X and digits 0, spaces and punctuation stay: about the
+ * same width as the words, so the copy wraps where the page does, and none
+ * of the words.
+ */
 export declare function scramble(text: string): string;
 /**
  * Scrubs a cloned subtree so the words are gone before any pixel is drawn:

@@ -188,17 +188,38 @@ function covered(element: Element) {
   }
   const real = boxes.filter((box) => box.width > 0 || box.height > 0);
   if (real.length === 0) return null;
-  return {
+  const area = {
     left: Math.min(...real.map((box) => box.left)),
     top: Math.min(...real.map((box) => box.top)),
     right: Math.max(...real.map((box) => box.right)),
     bottom: Math.max(...real.map((box) => box.bottom)),
   };
+  // Words cut off by a clipping box are not drawn past it, so neither is the cover.
+  for (let holder: Element | null = element; holder && holder !== document.documentElement; holder = holder.parentElement) {
+    const style = getComputedStyle(holder);
+    if (style.overflowX === "visible" && style.overflowY === "visible") continue;
+    const clip = holder.getBoundingClientRect();
+    if (style.overflowX !== "visible") {
+      area.left = Math.max(area.left, clip.left);
+      area.right = Math.min(area.right, clip.right);
+    }
+    if (style.overflowY !== "visible") {
+      area.top = Math.max(area.top, clip.top);
+      area.bottom = Math.min(area.bottom, clip.bottom);
+    }
+  }
+  return area.right > area.left && area.bottom > area.top ? area : null;
 }
 
-/** Every letter and digit becomes "x": the shape of the words, none of the words. */
+/**
+ * Letters become x or X and digits 0, spaces and punctuation stay: about the
+ * same width as the words, so the copy wraps where the page does, and none
+ * of the words.
+ */
 export function scramble(text: string) {
-  return text.replace(/\S/g, "x");
+  return text.replace(/[\p{L}\p{M}\p{N}]/gu, (each) =>
+    /\p{N}/u.test(each) ? "0" : /\p{Lu}/u.test(each) ? "X" : "x",
+  );
 }
 
 /**
