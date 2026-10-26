@@ -176,26 +176,12 @@ export function regions(privacy: Privacy, skip: (element: Element) => boolean): 
   return found;
 }
 
-function covered(element: Element) {
-  if (element.getClientRects().length === 0) return null;
-  const boxes = [element.getBoundingClientRect()];
-  try {
-    const range = document.createRange();
-    range.selectNodeContents(element);
-    boxes.push(range.getBoundingClientRect());
-  } catch {
-    // An element with no contents covers only its own box.
-  }
-  const real = boxes.filter((box) => box.width > 0 || box.height > 0);
-  if (real.length === 0) return null;
-  const area = {
-    left: Math.min(...real.map((box) => box.left)),
-    top: Math.min(...real.map((box) => box.top)),
-    right: Math.max(...real.map((box) => box.right)),
-    bottom: Math.max(...real.map((box) => box.bottom)),
-  };
-  // Words cut off by a clipping box are not drawn past it, so neither is the cover.
-  for (let holder: Element | null = element; holder && holder !== document.documentElement; holder = holder.parentElement) {
+type Box = { left: number; top: number; right: number; bottom: number };
+
+/** The box clipped by every clipping holder from `from` up to the page. */
+function clipped(box: Box, from: Element | null): Box | null {
+  const area = { ...box };
+  for (let holder = from; holder && holder !== document.documentElement; holder = holder.parentElement) {
     const style = getComputedStyle(holder);
     if (style.overflowX === "visible" && style.overflowY === "visible") continue;
     const clip = holder.getBoundingClientRect();
@@ -209,6 +195,44 @@ function covered(element: Element) {
     }
   }
   return area.right > area.left && area.bottom > area.top ? area : null;
+}
+
+const MAX_TEXT_RUNS = 400;
+
+/**
+ * Where an element's pixels are: its own box and its words, each run of
+ * words cut where a clipping box (an ellipsis, a scroller) cuts it, so the
+ * cover never spills onto its neighbours.
+ */
+function covered(element: Element): Box | null {
+  if (element.getClientRects().length === 0) return null;
+  const boxes: Box[] = [element.getBoundingClientRect()];
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+  let runs = 0;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!node.nodeValue?.trim()) continue;
+    if (++runs > MAX_TEXT_RUNS) {
+      // A long area is covered whole rather than run by run.
+      range.selectNodeContents(element);
+      boxes.push(range.getBoundingClientRect());
+      break;
+    }
+    range.selectNodeContents(node);
+    const box = clipped(range.getBoundingClientRect(), node.parentElement);
+    if (box) boxes.push(box);
+  }
+  const real = boxes.filter((box) => box.right - box.left > 0 || box.bottom - box.top > 0);
+  if (real.length === 0) return null;
+  return clipped(
+    {
+      left: Math.min(...real.map((box) => box.left)),
+      top: Math.min(...real.map((box) => box.top)),
+      right: Math.max(...real.map((box) => box.right)),
+      bottom: Math.max(...real.map((box) => box.bottom)),
+    },
+    element,
+  );
 }
 
 /**

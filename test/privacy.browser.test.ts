@@ -90,7 +90,7 @@ function ocr(png: string, name: string) {
   return { file, words, squashed: words.toUpperCase().replace(/[^A-Z0-9]/g, "") };
 }
 
-const SECRETS = ["SALARY", "85000", "SECRET", "4417", "JANE", "EXAMPLE", "PHONE", "7095550199"];
+const SECRETS = ["SALARY", "85000", "SECRET", "4417", "JANE", "EXAMPLE", "PHONE", "7095550199", "CUTOFF", "4242"];
 
 describe("private areas in the sent screenshot", () => {
   it("leaves a marked element, a hidden area, a selector and a typed field unreadable", async () => {
@@ -99,14 +99,17 @@ describe("private areas in the sent screenshot", () => {
     expect(sent.screenshot).toBeTruthy();
     // The window showed exactly the picture that was sent.
     expect(sent.preview).toBe(sent.screenshot);
-    expect(sent.covered).toContain("4 private areas covered");
-    const dark = await ink(page, sent.screenshot!, ["public", "marked", "hidden", "email", "phone"]);
+    expect(sent.covered).toContain("5 private areas covered");
+    const dark = await ink(page, sent.screenshot!, ["public", "marked", "hidden", "email", "phone", "clip", "beside"]);
     expect(dark.public).toBeGreaterThan(200);
-    for (const id of ["marked", "hidden", "email", "phone"]) expect(dark[id], id).toBe(0);
+    for (const id of ["marked", "hidden", "email", "phone", "clip"]) expect(dark[id], id).toBe(0);
+    // Cut-off words are covered only where they are drawn: the words beside stay sharp.
+    expect(dark.beside).toBeGreaterThan(100);
     if (hasTesseract) {
       const read = ocr(sent.screenshot!, "marked");
       console.info(`OCR of ${read.file}:\n${read.words}`);
       expect(read.squashed).toContain("PUBLICCONTROLWORDS");
+      expect(read.squashed).toContain("BESIDE");
       for (const secret of SECRETS) expect(read.squashed, secret).not.toContain(secret);
     }
     await page.close();
