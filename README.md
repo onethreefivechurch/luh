@@ -13,7 +13,7 @@ Luh adds a feedback window to any website. A person writes a note, or points at 
 _Luh_ is Newfoundland for "look!", said while pointing.
 
 > [!NOTE]
-> Luh is a work in progress. It is not on npm yet, and the API may change before 1.0.
+> Luh is a work in progress, and **contributions are welcome**. It is not on npm yet, and the API may change before 1.0.
 
 ## What it does
 
@@ -76,7 +76,7 @@ To keep an area out of screenshots, mark it in your markup:
 
 ## Contributing
 
-Issues and pull requests are welcome. Run the demo and the tests as described in [Development](docs/development.md). Changes are listed in [CHANGELOG.md](CHANGELOG.md). Versions follow SemVer; while Luh is `0.x`, a breaking change raises the minor version.
+**Contributions welcome.** Open an issue or a pull request. Run the demo and the tests as described in [Development](docs/development.md). Changes are listed in [CHANGELOG.md](CHANGELOG.md). Versions follow SemVer; while Luh is `0.x`, a breaking change raises the minor version.
 
 ## License
 
