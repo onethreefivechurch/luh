@@ -55,6 +55,8 @@ document.querySelector('#feedback')!
   .addEventListener('click', event => notes.open({ from: event }));
 ```
 
+`onSubmit` is just your function. Post the note, open a GitHub issue, or hand it to an agent; Luh only waits for it to finish.
+
 If `onSubmit` returns an error or throws, the note stays open with its words and images, so the person can try again. Your server owns the endpoint, sign-in, CSRF protection and spam control.
 
 To keep an area out of screenshots, mark it in your markup:
