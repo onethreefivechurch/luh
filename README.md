@@ -4,6 +4,12 @@ Luh adds feedback to any website. Visitors can write a note straight away or poi
 
 _Luh_ is Newfoundland for “look!”, said while pointing. Made by [135 Main Community Church](https://135main.org) (Springdale, Newfoundland), available under MIT.
 
+![Luh in use: point at an element, write a note, attach a screenshot and draw on it](docs/images/luh-demo.gif)
+
+| Write a note about the part you picked | Draw on the screenshot; private areas are blurred for you |
+|---|---|
+| ![The Luh feedback window with a note, a page screenshot and the picked element](docs/images/luh-note.jpg) | ![Drawing an arrow on the page screenshot, with private areas blurred](docs/images/luh-annotate.jpg) |
+
 ## Install from GitHub
 
 Luh is not published to npm. The repository is [onethreefivechurch/luh](https://github.com/onethreefivechurch/luh). Node 22.12 or newer is required to build; the browser has no Node dependency.
