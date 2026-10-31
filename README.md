@@ -2,7 +2,7 @@
 
 Luh adds feedback to any website. Visitors can write a note straight away or point at an element first. Both paths use the same window, with optional screenshots and image annotations. The host receives one typed note and decides where it goes.
 
-_Luh_ is Newfoundland for “look!”, said while pointing. Made by [135 Main Community Church](https://135main.org) (Springdale, Newfoundland), available under MIT.
+_Luh_ is Newfoundland for “look!”, said while pointing. Made by [135 Main Community Church](https://135main.org), available under MIT.
 
 ![Luh in use: point at an element, write a note, attach a screenshot and draw on it](docs/images/luh-demo.gif)
 

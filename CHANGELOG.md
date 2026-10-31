@@ -33,7 +33,7 @@
 - Typed SVG factories replace icons across the optional trigger, note window and drawing tools.
 - An optional styleable trigger opens ordinary feedback; existing host buttons remain independent.
 - Styling examples cover plain websites, Tailwind and Nuxt UI, with verified browser part styling.
-- Attribution names 135 Main Community Church in Springdale, Newfoundland.
+- Attribution names 135 Main Community Church.
 
 ## 0.2.0
 
