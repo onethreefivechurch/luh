@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { History, handleAt, hitTest, moved, resized, tooSmall, type Mark } from "./drawing";
+import { History, bounds, handles, penPath, handleAt, hitTest, moved, resized, tooSmall, type Mark } from "./drawing";
 
 const width = (text: string) => text.length * 10;
 const size = { width: 1000, height: 800 };
@@ -65,5 +65,29 @@ describe("drawing", () => {
     history.undo();
     history.commit({ marks: [arrow, text], crop: null });
     expect(history.canRedo).toBe(false);
+  });
+});
+
+describe("freehand strokes", () => {
+  const pen: Mark = { id: 10, kind: "pen", points: [{ x: 10, y: 10 }, { x: 60, y: 20 }, { x: 80, y: 60 }, { x: 10, y: 10 }] };
+  it("keeps the samples and circle closure while smoothing between them", () => {
+    expect(penPath(pen.points)).toBe("M10 10 Q60 20 70 40 Q80 60 45 35 L10 10");
+    expect(pen.points[0]).toEqual(pen.points[3]);
+    expect(tooSmall({ id: 1, kind: "pen", points: [{ x: 0, y: 0 }, { x: 100, y: 0 }] }, 9)).toBe(false);
+  });
+  it("hits only the stroke, moves all points together and undoes a whole scribble", () => {
+    expect(hitTest([pen], { x: 35, y: 15 }, 6, width, 16)).toBe(pen);
+    expect(hitTest([pen], { x: 90, y: 10 }, 6, width, 16)).toBeNull();
+    expect(handles(pen)).toEqual([]);
+    const box = bounds(pen, width, 16);
+    expect(box).toEqual({ x: 10, y: 10, w: 70, h: 50 });
+    const shifted = moved(pen, -100, 10, size, box);
+    expect(shifted).toMatchObject({ points: [{ x: 0, y: 20 }, { x: 50, y: 30 }, { x: 70, y: 70 }, { x: 0, y: 20 }] });
+    const history = new History({ marks: [], crop: null });
+    history.commit({ marks: [pen], crop: null });
+    history.undo();
+    expect(history.scene.marks).toEqual([]);
+    history.redo();
+    expect(history.scene.marks).toEqual([pen]);
   });
 });

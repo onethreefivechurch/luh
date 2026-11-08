@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add a smoothed freehand pen with whole-stroke undo/redo for mouse, touch and stylus pointer input.
+- Add editable browser voice typing, hidden without speech recognition support, with a host `voice` switch, translated labels and styling parts.
+- Clarify that voice typing may use the browser vendor’s speech service before the note is sent.
+
 ## 0.5.0
 
 - Private by default: typed fields are hidden in screenshots unless `maskInputs: false`.

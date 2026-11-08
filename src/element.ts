@@ -238,6 +238,8 @@ export class CommentModeElement extends HTMLElement {
         ),
       );
     this.window = new NoteWindow(windowRoot, {
+      language,
+      voice: this.settings.voice !== false,
       pickLabel: this.settings.pickLabel,
       pick:
         this.settings.pickLabel && this.settings.elementPicking !== false

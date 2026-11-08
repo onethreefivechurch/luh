@@ -8,6 +8,8 @@ export interface WindowCallbacks {
     /** Hands the draft over to picking another part of the page. */
     pick?(): void;
     strings: Strings;
+    language?: string;
+    voice?: boolean;
     icons?: IconOverrides;
     name: NameField;
     screenshot: boolean;
@@ -68,6 +70,9 @@ export declare class NoteWindow {
     private readonly host;
     readonly panel: HTMLElement;
     private body;
+    private voice;
+    private microphone;
+    private voiceStatus;
     private nameField;
     private kind;
     private readonly queue;

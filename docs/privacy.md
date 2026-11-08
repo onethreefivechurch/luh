@@ -79,6 +79,16 @@ Screenshots are requested by the person, rendered from the DOM with `modern-scre
 
 Private areas are covered as described in [Keeping private data out](#keeping-private-data-out). Hosts decide whether screenshots are appropriate and explain their policy through `screenshotNote`; `ignore` leaves elements out of pictures and picking entirely. Uploaded images and the page URL may also contain private data. The library does not collect console logs, replay sessions, automatically capture screenshots, store notes, or send analytics.
 
-Image editing uses arrows, boxes, text, blur and crop, with undo/redo and selectable marks. Blur is visual redaction, not a guarantee against reconstruction; hosts requiring irreversible redaction should remove sensitive regions before upload. Picking describes light-DOM elements; shadow-root interiors and cross-origin frames are not supported targets.
+Image editing uses a freehand pen, arrows, boxes, text, blur and crop, with undo/redo and selectable marks. Blur is visual redaction, not a guarantee against reconstruction; hosts requiring irreversible redaction should remove sensitive regions before upload. Picking describes light-DOM elements; shadow-root interiors and cross-origin frames are not supported targets.
 
 The window supports keyboard navigation, Escape, Ctrl/⌘+Enter, labeled controls and focus restoration. Validate the exact host journey on its supported browsers and assistive technology; DOM tests do not establish accessibility certification.
+
+## Voice typing
+
+Luh itself stores nothing and sends no note or image until Send. Voice typing uses the browser’s own speech service when the person taps the microphone, like other voice typing. The browser may send audio to its vendor for recognition before Send; this is separate from delivery of the note. Luh does not record, store or attach audio, select a speech provider, or call a transcription server.
+
+The microphone appears only where `SpeechRecognition` or `webkitSpeechRecognition` exists. Browser support, microphone permission, language and speech-service access can still prevent recognition. A failure leaves existing words editable. `voice: false` hides the action for hosts that do not permit speech services.
+
+The person taps Stop to finish recognition and reviews the editable text before Send. Closing or discarding the note and disconnecting Luh abort recognition and ignore delayed results. Browsers control their own microphone permission and speech-service policy; a Cancel action cannot recall audio already processed by that service.
+
+Browser behavior is documented in [MDN’s SpeechRecognition reference](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition).

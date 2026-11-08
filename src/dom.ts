@@ -44,6 +44,7 @@ function append(element: Element, children: Child[]) {
 
 // Icons from Lucide (ISC licence), drawn at 24 and shown at 16 or 18.
 const ICONS = {
+  microphone: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8",
   close: "M18 6 6 18M6 6l12 12",
   camera:
     "M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",

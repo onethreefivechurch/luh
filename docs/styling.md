@@ -51,11 +51,11 @@ Public parts remain stable independently of internal CSS class names. Generic pa
 |---|---|
 | `luh-notes` | `trigger`, `outline`, `outline-label`, `toast`, `announcement`, `icon`, `icon-pen` |
 | `luh-surface`: window | `window`, `header`, `title`, `scroll`, `form`, `footer`, `move-handle`, `quote`, `kinds`, `kind` |
-| `luh-surface`: fields and text | `field`, `body-field`, `name-field`, `label`, `text`, `small-text`, `fine-print`, `warning`, `error`, `error-message`, `shortcut`, `announcement` |
-| `luh-surface`: buttons | `button`, `icon-button`, `primary`, `quiet`, `danger`, `send`, `cancel`, `close`, `wider`, `narrower`, `screenshot`, `point`, `add-images`, `draw`, `remove-image` |
+| `luh-surface`: fields and text | `field`, `body-field`, `name-field`, `label`, `text`, `small-text`, `fine-print`, `warning`, `error`, `error-message`, `shortcut`, `announcement`, `voice-status` |
+| `luh-surface`: buttons | `button`, `icon-button`, `primary`, `quiet`, `danger`, `send`, `cancel`, `close`, `wider`, `narrower`, `screenshot`, `point`, `add-images`, `draw`, `remove-image`, `microphone` |
 | `luh-surface`: pictures | `images`, `image-row`, `image`, `image-name`, `thumbnail`, `image-actions`, `drop-zone` |
 | `luh-surface`: discard | `discard-dialog`, `discard-text`, `keep-editing`, `discard` |
-| `luh-surface`: editor | `editor`, `editor-header`, `editor-footer`, `editor-help`, `tools`, `tool`, `tool-label`, `tool-arrow`, `tool-box`, `tool-text`, `tool-blur`, `tool-crop`, `undo`, `redo`, `delete-mark`, `done`, `editor-cancel`, `editor-remove` |
+| `luh-surface`: editor | `editor`, `editor-header`, `editor-footer`, `editor-help`, `tools`, `tool`, `tool-label`, `tool-pen`, `tool-arrow`, `tool-box`, `tool-text`, `tool-blur`, `tool-crop`, `undo`, `redo`, `delete-mark`, `done`, `editor-cancel`, `editor-remove` |
 | `luh-surface`: drawing | `drawing-stage`, `canvas`, `mark`, `selection`, `resize-handle`, `drawing-text`, `drawing-label`, `drawing-group`, `drawing-object`, `graphic`, `path`, `rectangle`, `line`, `circle`, `polygon`, `ellipse`, `polyline`, `symbol` |
 | Both hosts | `group`, `icon`, and `icon-<name>` for icons actually rendered |
 

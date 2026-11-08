@@ -3,6 +3,7 @@
 // drawing and screenshot choice either way. Pictures come from Screenshot
 // this page, a paste, a drop anywhere on the screen, or the file chooser.
 import Uppy from "@uppy/core";
+import { VoiceInput } from "./voice";
 import { openEditor } from "./editor";
 import { apple, finePointer, h, icon as renderIcon, showOnTop, hideFromTop } from "./dom";
 import { format, type Strings } from "./strings";
@@ -18,6 +19,8 @@ export interface WindowCallbacks {
   /** Hands the draft over to picking another part of the page. */
   pick?(): void;
   strings: Strings;
+  language?: string;
+  voice?: boolean;
   icons?: IconOverrides;
   name: NameField;
   screenshot: boolean;
@@ -59,6 +62,9 @@ type Picture = PictureMeta & { id: string; file: File };
 export class NoteWindow {
   readonly panel: HTMLElement;
   private body = "";
+  private voice: VoiceInput;
+  private microphone: HTMLButtonElement;
+  private voiceStatus = h("p", { class: "cm-small", part: "voice-status", role: "status" });
   private nameField: HTMLInputElement;
   private kind: string | null;
   private readonly queue: Uppy<PictureMeta, Record<string, never>>;
@@ -169,6 +175,29 @@ export class NoteWindow {
         void this.submit();
       }
     });
+    this.voice = new VoiceInput(host.language || navigator.language || "en", words => {
+      if (!this.ownsInput() || this.panel.hidden) {
+        this.voice.cancel();
+        return;
+      }
+      const separator = this.field.value && !/\s$/.test(this.field.value) ? " " : "";
+      this.field.value = `${this.field.value}${separator}${words}`.slice(0, this.field.maxLength);
+      this.body = this.field.value;
+      this.fit();
+      this.refresh();
+    }, () => this.refresh(), () => {
+      this.problem = strings.voiceFailed;
+      this.refresh();
+    });
+    this.microphone = h("button", {
+      type: "button", class: "cm-button", part: "microphone",
+      hidden: host.voice === false || !this.voice.available,
+      onclick: () => {
+        if (this.panel.hidden || !this.ownsInput() || (!this.voice.active && !this.acceptsFiles())) return;
+        this.problem = null;
+        this.voice.toggle();
+      },
+    }, this.icon("microphone"), h("span", {}, strings.voiceStart));
     this.screenshotButton = h(
       "button",
       {
@@ -283,6 +312,8 @@ export class NoteWindow {
       this.quote,
       this.kindRow,
       this.field,
+      this.microphone,
+      this.voiceStatus,
       host.name === "off"
         ? null
         : h(
@@ -424,6 +455,7 @@ export class NoteWindow {
     if (!this.isOpen) return;
     this.suspended = false;
     this.opening++;
+    this.voice.cancel();
     this.editorController?.abort();
     this.editorController = null;
     this.drawing = false;
@@ -449,6 +481,7 @@ export class NoteWindow {
   /** Closes, asking first when there is something to lose. */
   requestClose() {
     if (this.sending) return;
+    this.voice.cancel();
     if (!this.body.trim() && !this.nameField.value.trim() && !this.pictures.length)
       return this.close();
     this.confirming = true;
@@ -503,6 +536,14 @@ export class NoteWindow {
       kinds.find((kind) => kind.value === this.kind)?.prompt ?? strings.placeholder;
     this.field.placeholder = placeholder;
     this.field.disabled = this.sending;
+    if (this.microphone) {
+      const label = this.voice.finishing ? strings.voiceFinishing : this.voice.active ? strings.voiceStop : strings.voiceStart;
+      this.microphone.querySelector("span")!.textContent = label;
+      this.microphone.setAttribute("aria-pressed", String(this.voice.active));
+      this.microphone.disabled = this.voice.finishing || (!this.voice.active && !this.acceptsFiles());
+      this.voiceStatus.textContent = this.voice.finishing ? strings.voiceFinishing : this.voice.active ? strings.voiceListening : "";
+      this.voiceStatus.hidden = !this.voice.active;
+    }
     this.kindRow.hidden = kinds.length === 0;
     this.kindRow.replaceChildren(
       ...kinds.map((kind, index) => {
@@ -546,7 +587,7 @@ export class NoteWindow {
     this.list.replaceChildren(...this.pictures.map((picture) => this.row(picture)));
     const hasScreenshot = this.pictures.some((picture) => picture.taken === "page");
     this.screenshotButton.hidden = !this.host.screenshot || hasScreenshot;
-    this.screenshotButton.disabled = this.capturing || this.sending || this.full();
+    this.screenshotButton.disabled = !this.acceptsFiles() || this.full();
     this.screenshotButton.querySelector("span")!.textContent = this.capturing
       ? `${strings.screenshotTaking} ${this.percent}%`
       : strings.screenshot;
@@ -576,7 +617,7 @@ export class NoteWindow {
       !this.body.trim() ||
       (this.host.name === "required" && !this.nameField.value.trim()) ||
       this.sending ||
-      this.capturing;
+      this.capturing || this.voice.active;
     this.sendButton.querySelector("span")!.textContent = this.sending
       ? strings.sending
       : strings.send;
@@ -624,7 +665,7 @@ export class NoteWindow {
               class: "cm-button cm-quiet",
               part: "draw",
               "aria-label": format(strings.drawOn, { name }),
-              disabled: this.sending,
+              disabled: this.sending || this.voice.active,
               onclick: draw,
             },
             this.icon("pen"),
@@ -639,7 +680,7 @@ export class NoteWindow {
               class: "cm-button cm-quiet",
               part: "blur-more",
               "aria-label": format(strings.blurMoreOn, { name }),
-              disabled: this.sending,
+              disabled: this.sending || this.voice.active,
               onclick: blur,
             },
             this.icon("blur"),
@@ -782,7 +823,7 @@ export class NoteWindow {
   }
 
   private async submit() {
-    if (!this.body.trim() || this.panel.hidden || this.sending || this.capturing) return;
+    if (!this.body.trim() || this.panel.hidden || this.sending || this.capturing || this.voice.active || !this.ownsInput()) return;
     if (this.host.name === "required" && !this.nameField.value.trim()) {
       this.error = this.host.strings.nameRequired;
       this.refresh();
@@ -834,6 +875,7 @@ export class NoteWindow {
 
   /** Called after close when the controller replaces or disconnects this window. */
   dispose() {
+    this.voice.cancel();
     this.queue.destroy();
   }
 
@@ -850,7 +892,7 @@ export class NoteWindow {
   }
 
   private acceptsFiles() {
-    return !this.suspended && !this.drawing && !this.sending && !this.capturing && !this.confirming;
+    return !this.voice.active && !this.suspended && !this.drawing && !this.sending && !this.capturing && !this.confirming;
   }
 
   // Foreground ownership blocks file navigation even while this draft is busy.
@@ -862,6 +904,7 @@ export class NoteWindow {
       const guarded = (event: DocumentEventMap[K]) => {
         if (this.ownsInput()) listener(event);
         else {
+          this.voice.cancel();
           this.dragging = 0;
           this.dropZone.hidden = true;
           hideFromTop(this.dropZone);

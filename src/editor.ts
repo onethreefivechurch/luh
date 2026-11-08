@@ -6,6 +6,7 @@
 import { MARK_COLOR } from "./capture";
 import {
   arrowHead,
+  penPath,
   bounds,
   handleAt,
   handles,
@@ -31,6 +32,7 @@ export type EditorResult =
   | { action: "remove" };
 
 const TOOLS: { tool: Tool; icon: IconName; key: string; label: keyof Strings }[] = [
+  { tool: "pen", icon: "pen", key: "p", label: "pen" },
   { tool: "arrow", icon: "arrow", key: "a", label: "arrow" },
   { tool: "box", icon: "box", key: "r", label: "box" },
   { tool: "text", icon: "text", key: "t", label: "text" },
@@ -62,6 +64,7 @@ export function openEditor(
     const history = new History({ marks: [], crop: null });
     let selected: number | null = null;
     let gesture: Gesture | null = null;
+    let pointer: number | null = null;
     let typing: { x: number; y: number; text: string; id?: number } | null = null;
     let nextId = 1;
     const previews = new Map<number, { key: string; url: string }>();
@@ -246,6 +249,7 @@ export function openEditor(
 
     function markLabel(mark: Mark, index: number) {
       const kind = {
+        pen: strings.pen,
         arrow: strings.arrow,
         box: strings.box,
         blur: strings.blur,
@@ -257,6 +261,15 @@ export function openEditor(
 
     function drawMark(mark: Mark, live = false): SVGElement {
       const width = stroke();
+      if (mark.kind === "pen")
+        return s("path", {
+          d: penPath(mark.points),
+          fill: "none",
+          stroke: MARK_COLOR,
+          "stroke-width": width,
+          "stroke-linecap": "round",
+          "stroke-linejoin": "round",
+        });
       if (mark.kind === "blur") {
         const url = live ? "" : preview(mark);
         return url
@@ -496,7 +509,7 @@ export function openEditor(
     }
 
     function down(event: PointerEvent) {
-      if (!size.width || event.button > 0) return;
+      if (!size.width || event.button > 0 || pointer !== null) return;
       // The press must not move focus: a new text field takes it.
       event.preventDefault();
       if (typing) {
@@ -506,7 +519,10 @@ export function openEditor(
       const at = point(event);
       const current = selectedMark();
       const handle = current && handleAt(current, at, slop() * 1.2);
-      if (current && handle) {
+      if (tool === "pen") {
+        selected = null;
+        gesture = { kind: "draw", start: at, draft: { id: 0, kind: "pen", points: [at] } };
+      } else if (current && handle) {
         gesture = { kind: "handle", handle, original: current };
       } else {
         const hit =
@@ -539,10 +555,12 @@ export function openEditor(
           gesture = { kind: "draw", start: at, draft };
         }
       }
+      pointer = event.pointerId;
       svg.setPointerCapture?.(event.pointerId);
       render();
     }
     function move(event: PointerEvent) {
+      if (pointer !== null && event.pointerId !== pointer) return;
       if (!gesture) {
         // The pointer shows what a press would do.
         const at = point(event);
@@ -559,10 +577,17 @@ export function openEditor(
       const at = point(event);
       if (gesture.kind === "draw") {
         const draft = gesture.draft;
-        gesture.draft =
-          draft.kind === "arrow"
+        if (draft.kind === "pen") {
+          const samples = event.getCoalescedEvents?.();
+          gesture.draft = {
+            ...draft,
+            points: [...draft.points, ...(samples?.length ? samples : [event]).map(point)],
+          };
+        } else {
+          gesture.draft = draft.kind === "arrow"
             ? { ...draft, x2: at.x, y2: at.y }
             : { ...draft, ...rectFrom(gesture.start, at) };
+        }
       } else if (gesture.kind === "move") {
         const next = moved(
           gesture.original,
@@ -578,7 +603,10 @@ export function openEditor(
       }
       render();
     }
-    function up() {
+    function up(event: PointerEvent) {
+      if (event.pointerId !== pointer) return;
+      move(event);
+      pointer = null;
       const current = gesture;
       gesture = null;
       if (!current) return;
@@ -590,7 +618,7 @@ export function openEditor(
           return;
         }
         const mark = { ...draft, id: nextId++ } as Mark;
-        selected = mark.id;
+        selected = mark.kind === "pen" ? null : mark.id;
         commit({ ...scene(), marks: [...scene().marks, mark] });
         return;
       }
@@ -688,10 +716,15 @@ export function openEditor(
     svg.addEventListener("pointerdown", down);
     svg.addEventListener("pointermove", move);
     svg.addEventListener("pointerup", up);
-    svg.addEventListener("pointercancel", () => {
+    const cancelPointer = (event: PointerEvent) => {
+      if (event.pointerId !== pointer) return;
+      if (gesture && gesture.kind !== "draw") history.scene = replace(gesture.original);
+      pointer = null;
       gesture = null;
       render();
-    });
+    };
+    svg.addEventListener("pointercancel", cancelPointer);
+    svg.addEventListener("lostpointercapture", cancelPointer);
     svg.addEventListener("dblclick", edit);
 
     async function done() {
@@ -721,7 +754,8 @@ export function openEditor(
       context.lineWidth = stroke();
       context.lineCap = "round";
       context.lineJoin = "round";
-      if (mark.kind === "blur") {
+      if (mark.kind === "pen") context.stroke(new Path2D(penPath(mark.points)));
+      else if (mark.kind === "blur") {
         const pixelated = pixelate(mark);
         if (pixelated) context.drawImage(pixelated, mark.x, mark.y);
       } else if (mark.kind === "box") context.strokeRect(mark.x, mark.y, mark.w, mark.h);

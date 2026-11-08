@@ -39,7 +39,7 @@ document.querySelector('#feedback')!.addEventListener('click', event => notes.op
 document.querySelector('#pick')!.addEventListener('click', () => notes.toggle());
 ```
 
-`onSubmit` resolves after the host accepts the note. Returning `{ error: string }` or throwing keeps the note open for retry. A successful `fetch()` alone is insufficient: check `response.ok`. Files must use `FormData` or another binary upload strategy; JSON serialization does not upload a `File`. The library sends nothing before submission.
+`onSubmit` resolves after the host accepts the note. Returning `{ error: string }` or throwing keeps the note open for retry. A successful `fetch()` alone is insufficient: check `response.ok`. Files must use `FormData` or another binary upload strategy; JSON serialization does not upload a `File`. Luh itself sends no note or image before submission. Voice typing may use the browser’s speech service after a microphone tap; see [Voice typing and privacy](privacy.md#voice-typing).
 
 Hosts offering in-window picking set `pickLabel`, for example `pickLabel: "Point"`. Point hides the window while the person selects an element, keeping the words, name, kind and image queue. Escape or the configured picking shortcut returns to the original draft. The initial page context stays captured at the original opening; the chosen element and selected words update. `state.open` remains true while Point is active. Revoking permission or disabling element picking restores the retained draft and hides Point; delivery still checks the current permission.
 
@@ -100,3 +100,11 @@ notes.addEventListener('change', event => console.log(event.detail.active)); // 
 A normal successful cycle emits `open`, `sent`, then `close`. Failures emit no `sent`. `close` fires for cancellation and successful submission. `change` tracks `{ active, open, capturing }`. Lifecycle events can power host UI; they are not a second delivery mechanism.
 
 `open({ from?, element?, selectedText? })` accepts an opener element or click event for focus restoration. `element` opens a picked note directly. `close()` discards immediately; the window's Cancel button asks before discarding a draft. `toggle(force?)` switches picking. `active`, `isOpen`, `state`, `allowed` and `options` expose current state. `elementName(element, strings?)` provides a spoken element description. `defineCommentMode(tag?)` registers a custom tag idempotently. Remove the element to release its listeners.
+
+## Pen and voice typing
+
+1. Choose Screenshot this page or add an image, then choose Draw on it.
+2. Choose Pen (keyboard shortcut P). Drag a finger, stylus or mouse to circle an area or scribble. Each stroke stays as drawn, with light smoothing. Undo and Redo act on whole strokes. Another drawing tool can select a stroke to move or delete it.
+3. Choose Done to keep the annotated image, or Cancel to keep the original. Drawing captures touch gestures only on the canvas; the page remains scrollable outside the editor.
+4. Where a microphone appears, choose Type with your voice. The browser may ask for microphone permission and use its own speech service. Choose Stop voice typing when finished.
+5. Edit the words in the note, then choose Send. A speech error keeps existing words and allows another attempt or typing instead.

@@ -107,6 +107,8 @@ export interface CommentModeOptions {
     screenshot?: boolean;
     /** Offer image annotation. Default true. */
     drawing?: boolean;
+    /** Offer browser voice typing when available. May use the browser vendor speech service. Default true. */
+    voice?: boolean;
     /** Allow picking elements, including open({ element }). Default true. */
     elementPicking?: boolean;
     /** Widget language; defaults to the page language. Unknown locales fall back to English. */

@@ -47,7 +47,13 @@ export declare const STRINGS: {
     modeOn: string;
     modeOff: string;
     pickHint: string;
+    voiceStart: string;
+    voiceStop: string;
+    voiceListening: string;
+    voiceFinishing: string;
+    voiceFailed: string;
     drawTitle: string;
+    pen: string;
     arrow: string;
     box: string;
     text: string;
