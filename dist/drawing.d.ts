@@ -8,8 +8,12 @@ export type Rect = {
     w: number;
     h: number;
 };
-export type Tool = "arrow" | "box" | "text" | "blur" | "crop";
-export type Mark = ({
+export type Tool = "arrow" | "box" | "text" | "blur" | "crop" | "pen";
+export type Mark = {
+    id: number;
+    kind: "pen";
+    points: Point[];
+} | ({
     id: number;
     kind: "box";
 } & Rect) | ({
@@ -80,3 +84,5 @@ export declare class History {
     undo(): void;
     redo(): void;
 }
+/** A midpoint-smoothed path shared by the SVG preview and PNG export. Raw samples stay intact. */
+export declare function penPath(points: Point[]): string;

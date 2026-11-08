@@ -15,6 +15,6 @@ npm run build
 npm run demo:build
 ```
 
-The demo has its own page, buttons and delivery hook. `pnpm install`, `pnpm test`, `pnpm run build` and `pnpm demo` also work from this repository. No app checkout, credentials or backend are required. The automated public API suite checks permissions, feature switches, names, language overrides, lifecycle events, failed delivery, multipart uploads, disconnection and concurrent-note isolation. Drawing geometry has its own tests.
+The demo has its own page, buttons and delivery hook. `pnpm install`, `pnpm test`, `pnpm run build` and `pnpm demo` also work from this repository. No app checkout, credentials or backend are required. The automated public API suite checks permissions, feature switches, names, language overrides, lifecycle events, failed delivery, multipart uploads, disconnection and concurrent-note isolation. Drawing geometry and speech-recognition lifecycle each have their own tests. The browser suite covers mouse drawing and 390-pixel touch gestures, undo/redo and PNG pixels. Speech controls use a controlled browser-recognition fixture; they do not prove a real microphone or speech service.
 
 See [adoption research](adoption.md) for reference patterns and [CHANGELOG.md](../CHANGELOG.md) for version changes. Versioning follows SemVer; the `0.x` series remains pre-1.0, and breaking public API changes increment the minor version.

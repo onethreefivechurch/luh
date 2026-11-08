@@ -4,9 +4,10 @@
 
 export type Point = { x: number; y: number };
 export type Rect = { x: number; y: number; w: number; h: number };
-export type Tool = "arrow" | "box" | "text" | "blur" | "crop";
+export type Tool = "arrow" | "box" | "text" | "blur" | "crop" | "pen";
 
 export type Mark =
+  | { id: number; kind: "pen"; points: Point[] }
   | ({ id: number; kind: "box" } & Rect)
   | ({ id: number; kind: "blur" } & Rect)
   | { id: number; kind: "arrow"; x1: number; y1: number; x2: number; y2: number }
@@ -30,6 +31,16 @@ export function rectFrom(a: Point, b: Point): Rect {
 
 /** The box a mark covers; text needs its measured width. */
 export function bounds(mark: Mark, textWidth: (text: string) => number, fontSize: number): Rect {
+  if (mark.kind === "pen") {
+    let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+    for (const p of mark.points) {
+      left = Math.min(left, p.x);
+      top = Math.min(top, p.y);
+      right = Math.max(right, p.x);
+      bottom = Math.max(bottom, p.y);
+    }
+    return { x: left, y: top, w: right - left, h: bottom - top };
+  }
   if (mark.kind === "arrow")
     return rectFrom({ x: mark.x1, y: mark.y1 }, { x: mark.x2, y: mark.y2 });
   if (mark.kind === "text")
@@ -59,6 +70,10 @@ export function hitTest(
 ): Mark | null {
   for (let index = marks.length - 1; index >= 0; index--) {
     const mark = marks[index]!;
+    if (mark.kind === "pen") {
+      if (mark.points.some((at, i) => distanceToSegment(p, mark.points[Math.max(0, i - 1)]!, at) <= slop)) return mark;
+      continue;
+    }
     if (mark.kind === "arrow") {
       if (distanceToSegment(p, { x: mark.x1, y: mark.y1 }, { x: mark.x2, y: mark.y2 }) <= slop)
         return mark;
@@ -83,7 +98,7 @@ export function handles(mark: Mark): { handle: Handle; x: number; y: number }[] 
       { handle: "start", x: mark.x1, y: mark.y1 },
       { handle: "end", x: mark.x2, y: mark.y2 },
     ];
-  if (mark.kind === "text") return [];
+  if (mark.kind === "text" || mark.kind === "pen") return [];
   return [
     { handle: "nw", x: mark.x, y: mark.y },
     { handle: "ne", x: mark.x + mark.w, y: mark.y },
@@ -111,6 +126,8 @@ export function moved(
   // The whole mark stays on the picture: the move is limited by its box.
   const x = clamp(dx, -box.x, size.width - box.x - box.w);
   const y = clamp(dy, -box.y, size.height - box.y - box.h);
+  if (mark.kind === "pen")
+    return { ...mark, points: mark.points.map((p) => ({ x: p.x + x, y: p.y + y })) };
   if (mark.kind === "arrow")
     return { ...mark, x1: mark.x1 + x, y1: mark.y1 + y, x2: mark.x2 + x, y2: mark.y2 + y };
   return { ...mark, x: mark.x + x, y: mark.y + y };
@@ -120,7 +137,7 @@ export function moved(
 export function resized(mark: Mark, handle: Handle, p: Point): Mark {
   if (mark.kind === "arrow")
     return handle === "start" ? { ...mark, x1: p.x, y1: p.y } : { ...mark, x2: p.x, y2: p.y };
-  if (mark.kind === "text") return mark;
+  if (mark.kind === "text" || mark.kind === "pen") return mark;
   const opposite = {
     nw: { x: mark.x + mark.w, y: mark.y + mark.h },
     ne: { x: mark.x, y: mark.y + mark.h },
@@ -132,6 +149,7 @@ export function resized(mark: Mark, handle: Handle, p: Point): Mark {
 
 /** True when a just-drawn mark is too small to be meant. */
 export function tooSmall(mark: Mark | ({ kind: "crop" } & Rect), least: number): boolean {
+  if (mark.kind === "pen") return mark.points.length < 2;
   if (mark.kind === "arrow") return Math.hypot(mark.x2 - mark.x1, mark.y2 - mark.y1) < least;
   if (mark.kind === "text") return !mark.text.trim();
   return mark.w < least || mark.h < least;
@@ -180,4 +198,18 @@ export class History {
     this.past.push(this.scene);
     this.scene = next;
   }
+}
+
+/** A midpoint-smoothed path shared by the SVG preview and PNG export. Raw samples stay intact. */
+export function penPath(points: Point[]): string {
+  const first = points[0];
+  if (!first) return "";
+  let path = `M${first.x} ${first.y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const at = points[i]!;
+    const next = points[i + 1]!;
+    path += ` Q${at.x} ${at.y} ${(at.x + next.x) / 2} ${(at.y + next.y) / 2}`;
+  }
+  const last = points[points.length - 1]!;
+  return `${path} L${last.x} ${last.y}`;
 }

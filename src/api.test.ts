@@ -588,3 +588,28 @@ describe("host styling API", () => {
     await Promise.resolve();
   });
 });
+
+describe("microphone integration", () => {
+  it("hides unsupported voice typing and honors the host switch", () => {
+    const mode = createCommentMode();
+    mode.open();
+    expect(panel(mode).querySelector<HTMLButtonElement>('[part~="microphone"]')!.hidden).toBe(true);
+  });
+
+  it("translates supported voice typing and lets a host disable it", () => {
+    Object.defineProperty(window, "SpeechRecognition", { configurable: true, value: class {} });
+    try {
+      const mode = createCommentMode({ strings: { voiceStart: "Parler" } });
+      mode.open();
+      const mic = () => mode.surface.shadowRoot!.querySelector<HTMLButtonElement>('[part~="microphone"]')!;
+      expect(mic().hidden).toBe(false);
+      expect(mic().textContent).toBe("Parler");
+      mode.close();
+      mode.configure({ voice: false });
+      mode.open();
+      expect(mic().hidden).toBe(true);
+    } finally {
+      Reflect.deleteProperty(window, "SpeechRecognition");
+    }
+  });
+});

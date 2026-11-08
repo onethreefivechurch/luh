@@ -18,9 +18,10 @@ _Luh_ is Newfoundland for "look!", said while pointing.
 ## What it does
 
 - **Point or write.** Open the window from your own button, or press `C` and click any element. The note carries what was picked and any selected words.
-- **Screenshots and drawing.** Capture the page, add images, then draw arrows, boxes and text, blur or crop.
+- **Screenshots and drawing.** Capture the page, add images, then draw freehand, arrows, boxes and text, blur or crop.
 - **Private by default.** Typed fields are never in a screenshot. Mark other areas once with `data-luh="blur"` or `data-luh="hide"`, or turn Luh off on whole pages.
-- **No framework, no service.** Plain ESM with TypeScript types. Luh stores nothing and sends nothing until the person presses Send; your code does the delivery.
+- **Voice typing.** Tap the microphone where the browser supports speech recognition, then edit the words before sending. Voice typing uses the browser’s own speech service.
+- **No framework, no service.** Plain ESM with TypeScript types. Luh itself stores nothing and sends nothing until the person presses Send; your code does the delivery.
 - **Fits your site.** Light and dark themes, CSS tokens, stable shadow parts, your own icons and every word translatable.
 
 ## Install

@@ -39,3 +39,17 @@ Chromium checks run at 1440 and 390 pixels against the standalone demo, with its
 - The Impeccable detector checks the changed styles, part mapping and demo. Its demo heading-hierarchy finding is corrected by separating the 24-pixel page title from 20-pixel section headings and 16-pixel body copy.
 
 Review screenshots remain outside Git. DOM checks and these browser styling checks do not establish screenshot pixel fidelity or assistive-technology compatibility. A receiving service, authenticated delivery, remote GitHub installation and real browser screenshot capture remain outside this standalone verification record.
+
+## Freehand and voice input
+
+The input checks use the standalone fixtures in `test/fixture/`. Browser speech recognition is controlled by a fixture; real microphone recognition, vendor speech-service access, physical phones and physical stylus input remain untested end to end.
+
+- `npm run typecheck`, `npm test`, `npm run test:browser`, `npm run build` and `npm run demo:build` pass on this branch. The suites contain 58 unit tests and 11 Chromium browser tests.
+- Real mouse input at 1440 pixels and Chromium touch input at a 390-pixel mobile viewport draw a smoothed circle. Each stroke survives Undo/Redo, and the submitted PNG contains its red pixels. The editor fits both viewports. Light-mode voice and pen renders are inspected at both sizes; captures stay outside Git.
+- Touch drawing does not move the page. After the editor closes, an actual touch swipe scrolls the host page. Only the drawing canvas disables touch panning.
+- Synthetic pen-pointer probes verify cancellation and pointer identity. A second pointer cannot finish or change the first gesture. Overlapping strokes remain separate and undo one at a time.
+- Controlled speech results verify microphone tap/stop at both sizes, the recognition language, editable appended text and delivery only after Send. Unsupported browsers hide the microphone; the host switch and translated labels are covered by API tests.
+- Recognition errors retain existing text. Closing a recording aborts it; a lasting disconnect releases recognition, and delayed results cannot enter a later draft. A synchronous DOM move preserves the existing draft, as before.
+- The existing screenshot suite passes its pixel and OCR privacy checks, including the readable public control.
+
+Hosts still verify their own speech service, supported languages and microphone permissions on the browsers they ship. The browser’s service may process audio before Send, as described in [Privacy](privacy.md#voice-typing). No app integration, authenticated delivery or production behavior is established by these standalone checks.

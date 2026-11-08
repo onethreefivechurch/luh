@@ -3,6 +3,7 @@ type Attributes = Record<string, string | number | boolean | null | undefined | 
 export declare function h<K extends keyof HTMLElementTagNameMap>(tag: K, attributes?: Attributes, ...children: Child[]): HTMLElementTagNameMap[K];
 export declare function s<K extends keyof SVGElementTagNameMap>(tag: K, attributes?: Attributes, ...children: Child[]): SVGElementTagNameMap[K];
 declare const ICONS: {
+    microphone: string;
     close: string;
     camera: string;
     image: string;

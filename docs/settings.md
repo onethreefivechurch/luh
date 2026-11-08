@@ -12,7 +12,8 @@ Every option `createCommentMode()` and `configure()` accept, and how to translat
 | `allowed` | `true` | Boolean or synchronous `() => boolean`; checked when opening, picking and submitting. A throwing callback denies access. |
 | `name` | `'off'` | `'off'`, `'optional'` or `'required'`. Trimmed name reaches the hook as `note.name`; absent names are `null`. |
 | `screenshot` | `true` | Offers page capture. Disabling it still allows uploading images. |
-| `drawing` | `true` | Offers arrows, boxes, text, blur and crop on images. |
+| `voice` | `true` | Offers a microphone when the browser has `SpeechRecognition` or `webkitSpeechRecognition`. Uses the browser’s own speech service only after a tap; `false` hides it. |
+| `drawing` | `true` | Offers a freehand pen, arrows, boxes, text, blur and crop on images. |
 | `deactivateOnSubmit` | `true` | Turns comment mode off after the host accepts a note. `false` keeps picking on. Refusals and pending sends retain the mode and draft. |
 | `elementPicking` | `true` | Enables picking by key, `toggle()` or `open({ element })`. Disabling it retains the ordinary note window. |
 | `pickLabel` | None | Words for a window action that hides the draft so another part of the page can be picked; C or Escape returns to the draft. Absent, or with `elementPicking: false`, no action is shown. The `point` part styles it. |
@@ -50,5 +51,7 @@ notes.configure({
   strings: { title: 'Parlez-nous de cette page' },
 });
 ```
+
+Voice typing uses `language` for recognition and falls back to the browser language when it is empty. The `voiceStart`, `voiceStop`, `voiceListening`, `voiceFinishing`, `voiceFailed` and `pen` strings translate the new controls and messages.
 
 Hosts translate kind labels, kind prompts, fine print and their own delivery errors. `note.context.language` describes the page language independently of the widget's chosen language.
