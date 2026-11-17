@@ -4,13 +4,15 @@ import { privacyFrom } from "./privacy";
 
 // A stand-in for modern-screenshot that clones the way it does (filter
 // before each child, children reported before their parent) and can be
-// told to slip: report a clone nobody filtered, or skip one.
-const slip = vi.hoisted(() => ({ extra: false, skip: false }));
+// told to slip: report a clone nobody filtered, or skip one. Like the
+// library, it draws a canvas as a picture; `swap` draws a paragraph as one too.
+const slip = vi.hoisted(() => ({ extra: false, skip: false, swap: false }));
 
 vi.mock("modern-screenshot", () => {
   type Options = { filter: (node: Node) => boolean; onCloneEachNode: (node: Node) => void };
   const clone = (node: Node, options: Options): Node => {
-    const copy = node.cloneNode(false);
+    const picture = node instanceof HTMLCanvasElement || (slip.swap && node instanceof HTMLParagraphElement);
+    const copy = picture ? document.createElement("img") : node.cloneNode(false);
     for (const child of node.childNodes) if (options.filter(child)) copy.appendChild(clone(child, options));
     if (slip.extra && node instanceof HTMLParagraphElement) options.onCloneEachNode(document.createElement("span"));
     if (!(slip.skip && node instanceof HTMLParagraphElement)) options.onCloneEachNode(copy);
@@ -30,6 +32,7 @@ afterEach(() => {
   document.body.replaceChildren();
   slip.extra = false;
   slip.skip = false;
+  slip.swap = false;
 });
 
 const capture = () => captureScreen("[data-ignore]", privacyFrom({}));
@@ -49,6 +52,17 @@ describe("captureScreen pairing clones with the page", () => {
   it("sends no picture when an element's clone is never reported", async () => {
     document.body.innerHTML = "<div><p>PRICE 2.00</p></div>";
     slip.skip = true;
+    expect(await capture()).toBeNull();
+  });
+
+  it("sends the picture when a drawn canvas is cloned as a picture", async () => {
+    document.body.innerHTML = "<div><canvas></canvas><p>AFTER</p></div>";
+    expect(await capture()).not.toBeNull();
+  });
+
+  it("sends no picture when an element's clone is some other kind", async () => {
+    document.body.innerHTML = "<div><p>PRICE 2.00</p></div>";
+    slip.swap = true;
     expect(await capture()).toBeNull();
   });
 });

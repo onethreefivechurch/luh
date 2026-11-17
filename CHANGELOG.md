@@ -4,7 +4,10 @@
 
 - Frames are drawn blank in screenshots, with their own box kept, as cross-origin frames already were. A same-origin frame's words were drawn unscrubbed, private areas included.
 - A same-origin frame no longer throws off the pairing of copied elements with the page, which could scramble public words near it (a price "2.00" drawn as "0.00" in Xs).
-- If the copy ever falls out of step with the page, no screenshot is produced rather than one redacted in the wrong places.
+- If the copy ever falls out of step with the page, no screenshot is produced rather than one redacted in the wrong places. The check allows the screenshot library's own stand-ins (a drawn canvas, a poster or a video frame copied as a picture), so pages with charts, maps, signature pads and videos still get screenshots, blurred or hidden where private.
+- A blank frame is drawn with the frame element's own styles only; nothing of the framed page's root (background, border, shadow) is drawn.
+- A video with no source and no poster (such as a camera preview) no longer stalls the screenshot forever; a blank box of its size stands in.
+- The browser tests fail when tesseract is missing, rather than skipping the OCR checks.
 
 ## 0.5.0
 

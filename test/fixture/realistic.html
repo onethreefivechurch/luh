@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Realistic</title><link rel="stylesheet" href="./page.css">
+<style>.small { font-size: 16px; } .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; font-size: 16px; } .grid > * { min-width: 0; }</style></head>
+<body>
+  <p class="row" id="public">PUBLIC CONTROL WORDS</p>
+  <!-- A page as people build them: forms, drawings, media, components, pictures. -->
+  <div class="grid">
+    <form>
+      <fieldset><legend>Sign up</legend>
+        <input class="small" name="name" value="Ann" style="width: 100px">
+        <input type="email" class="small" value="ann@example.org" style="width: 100px">
+        <input type="password" value="hunter2" style="width: 100px">
+        <label><input type="checkbox" checked> Yes</label>
+        <label><input type="radio" name="r" checked> One</label>
+        <select><option>First</option><option selected>Second</option></select>
+        <textarea rows="2" cols="10">Notes here</textarea>
+        <button type="button">Save</button>
+        <div contenteditable="true">Edit me</div>
+      </fieldset>
+    </form>
+    <div>
+      <svg width="160" height="60" aria-label="Logo"><defs><symbol id="dot" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></symbol></defs>
+        <use href="#dot" width="20" height="20"/><text x="24" y="40" font-size="20">SVG WORDS</text></svg>
+      <canvas id="spark" width="120" height="40"></canvas>
+      <video poster="./poster.svg" width="130" height="45"></video>
+      <p><video width="90" height="45"></video><span id="beside-video">BESIDE</span></p>
+      <img src="./poster.svg" alt="Poster" width="130" height="45">
+      <picture><source srcset="./poster.svg" type="image/svg+xml"><img src="./poster.svg" alt="" width="130" height="45"></picture>
+    </div>
+    <div>
+      <x-card><span>SLOTTED WORDS</span></x-card>
+      <details open><summary>More</summary><p>Inside details</p></details>
+      <table><tr><th>Item</th><td>2</td></tr></table>
+      <math><mi>x</mi><mo>=</mo><mn>2</mn></math>
+      <object data="./poster.svg" type="image/svg+xml" width="130" height="45"></object>
+      <template><p>Never drawn</p></template>
+      <noscript>No script</noscript>
+      <div style="display: none"><p>Hidden by style</p><canvas></canvas></div>
+      <iframe src="./frame.html" width="130" height="45"></iframe>
+      <p>Line<br>break<wbr>here</p><hr>
+    </div>
+    <div>
+      <p data-luh="blur">BLURRED 1212</p>
+      <div data-luh="hide"><canvas id="private-chart" width="120" height="40"></canvas><svg width="80" height="20"><text y="16">HIDDEN</text></svg></div>
+      <div style="overflow: auto; height: 60px"><p>Scroll one</p><p>Scroll two</p><p>Scroll three</p><p>Scroll four</p></div>
+      <script>/* inline script in the body */</script>
+      <style>.never { color: red; }</style>
+    </div>
+  </div>
+  <p class="row" id="after">AFTER PAGE WORDS</p>
+  <script>
+    customElements.define("x-card", class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: "open" }).innerHTML =
+          "<style>p { margin: 0; font: 20px Arial; }</style><p>SHADOW WORDS</p><slot></slot>";
+      }
+    });
+    for (const id of ["spark", "private-chart"]) {
+      const context = document.getElementById(id).getContext("2d");
+      context.strokeStyle = "#000";
+      context.beginPath();
+      context.moveTo(0, 30);
+      context.lineTo(40, 10);
+      context.lineTo(80, 25);
+      context.lineTo(120, 5);
+      context.stroke();
+    }
+  </script>
+  <script type="module" src="./fixture.ts"></script>
+</body></html>

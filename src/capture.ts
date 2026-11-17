@@ -42,8 +42,13 @@ export async function captureScreen(
     // records an element just before it is cloned, and cloning finishes
     // children before their parent, so a stack holds the pairs in step.
     const originals: Element[] = [root];
-    // The library reports a frame's clone twice; the second report is no new element.
-    const reported = new WeakSet<Node>();
+    // A same-origin frame's clone is reported twice: once as the frame's page
+    // root, then again after the frame's own styles are copied onto it.
+    const frames = new WeakMap<Node, HTMLIFrameElement>();
+    // Children each element has passed to the library so far, and the blank
+    // videos left out among them, by the position their stand-ins take.
+    const kept = new Map<Element, number>();
+    const blanks = new Map<Element, { index: number; video: HTMLVideoElement }[]>();
     let placeholderIndex = 0;
     const context = await createContext(root, {
       filter: (node) => {
@@ -51,13 +56,23 @@ export async function captureScreen(
         // blank, as a cross-origin one is. Its words are measured nowhere,
         // so drawing them could leak private ones.
         if (node.ownerDocument !== document) return false;
+        // The element whose children are being cloned: its own clone is not yet reported.
+        const parent = originals[originals.length - 1]!;
+        const index = kept.get(parent) ?? 0;
         if (node.nodeType === Node.ELEMENT_NODE) {
           const element = node as Element;
           // Hidden subtrees have no layout or pixels to capture. The library's
           // temporary style sandbox must not be cloned into its own picture.
           if (element === context.sandbox || getComputedStyle(element).display === "none") return false;
+          // A video with no source and no poster has nothing to draw, and the
+          // library would wait forever for it to seek: a blank box stands in.
+          if (element instanceof HTMLVideoElement && !element.currentSrc && !element.poster) {
+            blanks.set(parent, [...(blanks.get(parent) ?? []), { index, video: element }]);
+            return false;
+          }
           originals.push(element);
         }
+        kept.set(parent, index + 1);
         return true;
       },
       width: window.innerWidth,
@@ -72,20 +87,26 @@ export async function captureScreen(
       onCloneEachNode: (node) => {
         // Element checks go by node type: a frame's clone belongs to the
         // frame's own window, where this window's classes do not match.
-        if (node.nodeType !== Node.ELEMENT_NODE || reported.has(node)) return;
-        reported.add(node);
-        const original = originals.pop();
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
         const clone = node as Element;
-        const frame = original instanceof HTMLIFrameElement;
-        // A clone that is not its original's kind means the pairs slipped;
+        const known = frames.get(clone);
+        if (known) return drawBlank(clone as HTMLElement, known, ignore);
+        const original = originals.pop();
+        // A clone that cannot stand for its original means the pairs slipped;
         // no picture is sent rather than one scrubbed in the wrong places.
-        if (!original || (!frame && original.localName !== clone.localName)) throw new Error(OUT_OF_STEP);
-        if (!(original instanceof HTMLElement) || !("style" in clone)) return;
-        const html = clone as HTMLElement;
-        if (frame) blankFrame(html, original);
+        if (!original || !standsFor(clone, original)) throw new Error(OUT_OF_STEP);
+        blanks.get(original)?.forEach(({ index, video }, inserted) => {
+          const standIn = clone.ownerDocument.createElement("div");
+          drawBlank(standIn, video, ignore);
+          clone.insertBefore(standIn, clone.childNodes[index + inserted] ?? null);
+        });
+        if (original instanceof HTMLIFrameElement) {
+          frames.set(clone, original);
+          return drawBlank(clone as HTMLElement, original, ignore);
+        }
+        if (!(original instanceof HTMLElement) || !(node instanceof HTMLElement)) return;
         // Left out, but keeping its box so nothing around it moves.
-        if (original.matches(ignore)) html.style.opacity = "0";
-        if (frame || !(node instanceof HTMLElement)) return;
+        if (original.matches(ignore)) node.style.opacity = "0";
         if (node instanceof HTMLInputElement && node.type === "password") {
           node.value = "";
           node.setAttribute("value", "");
@@ -129,6 +150,7 @@ export async function captureScreen(
     context.fontCssTexts = new Map(embeddedFonts);
     try {
       const shot = await domToBlob(context);
+      // Every recorded element has had its clone: any left over means a scrub may have missed.
       if (originals.length > 0) throw new Error(OUT_OF_STEP);
       const blob = await redactImage(shot, areas, privacy, viewport, wholePage);
       if (!blob) return null;
@@ -145,27 +167,35 @@ export async function captureScreen(
 
 const OUT_OF_STEP = "Screenshot clones out of step with the page";
 
-/** The frame's own box, so the blank stand-in takes exactly its place. */
-const FRAME_BOX = [
-  "box-sizing",
-  "width",
-  "height",
-  "vertical-align",
-  ...["top", "right", "bottom", "left"].flatMap((side) => [
-    `padding-${side}`,
-    `border-${side}-width`,
-    `border-${side}-style`,
-    `border-${side}-color`,
-  ]),
-];
+// What modern-screenshot 4.7 draws in an element's place: a drawn canvas, a
+// poster or a video frame as a picture, and a same-origin frame as its page's
+// root. Any other kind change means the pairs slipped. A new stand-in in a
+// later version stops the picture rather than misplacing a scrub.
+const STAND_INS: Record<string, readonly string[]> = {
+  canvas: ["img"],
+  video: ["img", "canvas"],
+  iframe: ["html"],
+};
 
-/** Empties a frame's clone and gives it the frame's box: nothing inside is drawn, nothing around it moves. */
-function blankFrame(clone: HTMLElement, frame: HTMLIFrameElement) {
+function standsFor(clone: Element, original: Element) {
+  return clone.localName === original.localName || (STAND_INS[original.localName]?.includes(clone.localName) ?? false);
+}
+
+/**
+ * Draws a clone as its original's own box with nothing inside: the original's
+ * styles in full and nothing of what the clone was (for a same-origin frame,
+ * its page's root with background, classes and pseudo-elements). Nothing
+ * around it moves.
+ */
+function drawBlank(clone: HTMLElement, original: Element, ignore: string) {
   clone.replaceChildren();
-  const style = getComputedStyle(frame);
-  for (const name of FRAME_BOX) clone.style.setProperty(name, style.getPropertyValue(name));
-  clone.style.display = style.display === "inline" ? "inline-block" : style.display;
+  for (const name of clone.getAttributeNames()) clone.removeAttribute(name);
+  const style = getComputedStyle(original);
+  for (const name of style) clone.style.setProperty(name, style.getPropertyValue(name));
+  // Frames and videos are replaced elements; a stand-in needs a block box to keep the size.
+  if (style.display === "inline") clone.style.display = "inline-block";
   clone.style.overflow = "hidden";
+  if (original.matches(ignore)) clone.style.opacity = "0";
 }
 
 /** Reuses decoded pixels instead of downloading each photo again to inline it. */
