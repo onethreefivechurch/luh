@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1
+
+- Frames are drawn blank in screenshots, with their own box kept, as cross-origin frames already were. A same-origin frame's words were drawn unscrubbed, private areas included.
+- A same-origin frame no longer throws off the pairing of copied elements with the page, which could scramble public words near it (a price "2.00" drawn as "0.00" in Xs).
+- If the copy ever falls out of step with the page, no screenshot is produced rather than one redacted in the wrong places.
+
 ## 0.5.0
 
 - Private by default: typed fields are hidden in screenshots unless `maskInputs: false`.

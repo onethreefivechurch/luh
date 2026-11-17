@@ -28,7 +28,7 @@ _Luh_ is Newfoundland for "look!", said while pointing.
 Install from a GitHub release tag. Node 22.12 or newer is needed to build; the browser needs no Node.
 
 ```sh
-npm install github:onethreefivechurch/luh#v0.5.0
+npm install github:onethreefivechurch/luh#v0.5.1
 ```
 
 ## Quick start

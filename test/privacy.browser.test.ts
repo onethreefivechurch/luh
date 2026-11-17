@@ -83,6 +83,28 @@ function ink(page: Page, png: string, ids: string[]) {
   );
 }
 
+/** The colour drawn at the middle of each side of each element's border box, inset half a pixel. */
+function borders(page: Page, png: string, ids: string[]) {
+  return page.evaluate(
+    async ({ png, ids }) => {
+      const image = await createImageBitmap(await (await fetch(`data:image/png;base64,${png}`)).blob());
+      const scale = image.width / window.innerWidth;
+      const canvas = new OffscreenCanvas(image.width, image.height);
+      const context = canvas.getContext("2d")!;
+      context.drawImage(image, 0, 0);
+      const at = (x: number, y: number) => [...context.getImageData(Math.floor(x * scale), Math.floor(y * scale), 1, 1).data.slice(0, 3)];
+      return Object.fromEntries(
+        ids.map((id) => {
+          const box = document.getElementById(id)!.getBoundingClientRect();
+          const middle = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+          return [id, [at(box.left + 0.5, middle.y), at(box.right - 0.5, middle.y), at(middle.x, box.top + 0.5), at(middle.x, box.bottom - 0.5)]];
+        }),
+      );
+    },
+    { png, ids },
+  );
+}
+
 function ocr(png: string, name: string) {
   const file = join(folder, `${name}.png`);
   writeFileSync(file, Buffer.from(png, "base64"));
@@ -126,6 +148,32 @@ describe("private areas in the sent screenshot", () => {
       console.info(`OCR of ${read.file}:\n${read.words}`);
       for (const secret of ["PUBLIC", "CONTROL", ...SECRETS]) expect(read.squashed, secret).not.toContain(secret);
     }
+    await page.close();
+  }, 60_000);
+
+  it("keeps public words beside same-origin frames readable and draws no word from inside a frame", async () => {
+    const page = await openPage("framed.html");
+    // Both frames are readable from the page, so the screenshot library walks into them.
+    expect(await page.evaluate(() => [...document.querySelectorAll("iframe")].every((frame) => frame.contentDocument?.body?.textContent?.trim()))).toBe(true);
+    const sent = await send(page);
+    expect(sent.screenshot).toBeTruthy();
+    if (hasTesseract) {
+      const read = ocr(sent.screenshot!, "framed");
+      console.info(`OCR of ${read.file}:\n${read.words}`);
+      expect(read.squashed).toContain("PUBLICCONTROLWORDS");
+      expect(read.squashed).toContain("PRICE200EACH");
+      expect(read.squashed).toContain("AFTERFRAMEWORDS");
+      for (const secret of ["SALARY", "FRAMED", "7171", "HIDDEN", "5151", "MARY", "4040404", "INLINE", "6161", "TYPED", "3131"])
+        expect(read.squashed, secret).not.toContain(secret);
+    }
+    const dark = await ink(page, sent.screenshot!, ["public", "price", "after", "wrapped", "same", "plain", "inline"]);
+    for (const id of ["public", "price", "after"]) expect(dark[id], id).toBeGreaterThan(200);
+    // Frames are drawn blank, as a cross-origin frame is: no word from inside one, private or not.
+    for (const id of ["wrapped", "same", "plain", "inline"]) expect(dark[id], id).toBe(0);
+    // Each blank frame keeps the frame's own box, its default size and inset border included: nothing around it moves.
+    const lines = await borders(page, sent.screenshot!, ["same", "plain", "inline"]);
+    for (const [id, sides] of Object.entries(lines))
+      for (const side of sides) expect(Math.min(...side), `${id} border`).toBeLessThan(200);
     await page.close();
   }, 60_000);
 

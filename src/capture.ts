@@ -38,15 +38,25 @@ export async function captureScreen(
     const { createContext, destroyContext, domToBlob } = await import("modern-screenshot");
     // Font embedding must use the same metrics as the measured page.
     await document.fonts?.ready;
+    // Each clone is paired with the live element it came from: the filter
+    // records an element just before it is cloned, and cloning finishes
+    // children before their parent, so a stack holds the pairs in step.
     const originals: Element[] = [root];
+    // The library reports a frame's clone twice; the second report is no new element.
+    const reported = new WeakSet<Node>();
     let placeholderIndex = 0;
     const context = await createContext(root, {
       filter: (node) => {
-        // Hidden subtrees have no layout or pixels to capture. The library's
-        // temporary style sandbox must not be cloned into its own picture.
-        if (node instanceof Element) {
-          if (node === context.sandbox || getComputedStyle(node).display === "none") return false;
-          originals.push(node);
+        // Nothing inside a frame is drawn: a same-origin frame is captured
+        // blank, as a cross-origin one is. Its words are measured nowhere,
+        // so drawing them could leak private ones.
+        if (node.ownerDocument !== document) return false;
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const element = node as Element;
+          // Hidden subtrees have no layout or pixels to capture. The library's
+          // temporary style sandbox must not be cloned into its own picture.
+          if (element === context.sandbox || getComputedStyle(element).display === "none") return false;
+          originals.push(element);
         }
         return true;
       },
@@ -60,17 +70,26 @@ export async function captureScreen(
       onCloneNode: () => progress(0),
       onEmbedNode: () => progress(95),
       onCloneEachNode: (node) => {
-        if (!(node instanceof Element)) return;
-        // Cloning visits children before their parent; the filter records
-        // the matching originals before each subtree is visited.
+        // Element checks go by node type: a frame's clone belongs to the
+        // frame's own window, where this window's classes do not match.
+        if (node.nodeType !== Node.ELEMENT_NODE || reported.has(node)) return;
+        reported.add(node);
         const original = originals.pop();
-        if (!(node instanceof HTMLElement) || !(original instanceof HTMLElement)) return;
+        const clone = node as Element;
+        const frame = original instanceof HTMLIFrameElement;
+        // A clone that is not its original's kind means the pairs slipped;
+        // no picture is sent rather than one scrubbed in the wrong places.
+        if (!original || (!frame && original.localName !== clone.localName)) throw new Error(OUT_OF_STEP);
+        if (!(original instanceof HTMLElement) || !("style" in clone)) return;
+        const html = clone as HTMLElement;
+        if (frame) blankFrame(html, original);
+        // Left out, but keeping its box so nothing around it moves.
+        if (original.matches(ignore)) html.style.opacity = "0";
+        if (frame || !(node instanceof HTMLElement)) return;
         if (node instanceof HTMLInputElement && node.type === "password") {
           node.value = "";
           node.setAttribute("value", "");
         }
-        // Left out, but keeping its box so nothing around it moves.
-        if (original.matches(ignore)) node.style.opacity = "0";
         // Private words never reach the picture, even before the paint over them.
         const kind = wholePage && original === root ? "blur" : treatment(original, privacy);
         const parent = original.parentElement;
@@ -110,6 +129,7 @@ export async function captureScreen(
     context.fontCssTexts = new Map(embeddedFonts);
     try {
       const shot = await domToBlob(context);
+      if (originals.length > 0) throw new Error(OUT_OF_STEP);
       const blob = await redactImage(shot, areas, privacy, viewport, wholePage);
       if (!blob) return null;
       progress(100);
@@ -121,6 +141,31 @@ export async function captureScreen(
   } catch {
     return null;
   }
+}
+
+const OUT_OF_STEP = "Screenshot clones out of step with the page";
+
+/** The frame's own box, so the blank stand-in takes exactly its place. */
+const FRAME_BOX = [
+  "box-sizing",
+  "width",
+  "height",
+  "vertical-align",
+  ...["top", "right", "bottom", "left"].flatMap((side) => [
+    `padding-${side}`,
+    `border-${side}-width`,
+    `border-${side}-style`,
+    `border-${side}-color`,
+  ]),
+];
+
+/** Empties a frame's clone and gives it the frame's box: nothing inside is drawn, nothing around it moves. */
+function blankFrame(clone: HTMLElement, frame: HTMLIFrameElement) {
+  clone.replaceChildren();
+  const style = getComputedStyle(frame);
+  for (const name of FRAME_BOX) clone.style.setProperty(name, style.getPropertyValue(name));
+  clone.style.display = style.display === "inline" ? "inline-block" : style.display;
+  clone.style.overflow = "hidden";
 }
 
 /** Reuses decoded pixels instead of downloading each photo again to inline it. */
