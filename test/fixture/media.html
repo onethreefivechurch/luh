@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Media</title><link rel="stylesheet" href="./page.css"></head>
+<body>
+  <p class="row" id="public">PUBLIC CONTROL WORDS</p>
+  <div class="media">
+    <canvas id="chart" width="260" height="90"></canvas>
+    <div id="signature" data-luh="blur"><canvas width="260" height="90"></canvas></div>
+    <canvas id="pad" data-luh="hide" width="260" height="90"></canvas>
+  </div>
+  <div class="media">
+    <video id="clip" poster="./poster.svg" width="260" height="90"></video>
+    <div id="hidden" data-luh="hide"><video poster="./private-poster.svg" width="260" height="90"></video></div>
+    <video id="blurred" data-luh="blur" poster="./private-poster.svg" width="260" height="90"></video>
+  </div>
+  <p class="row" id="after">AFTER MEDIA WORDS</p>
+  <script>
+    // Drawn canvases: the screenshot library clones each one as a picture.
+    const draw = (canvas, words) => {
+      const context = canvas.getContext("2d");
+      context.fillStyle = "#fff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.font = "28px Arial, sans-serif";
+      context.fillStyle = "#000";
+      context.fillText(words, 10, 56);
+    };
+    draw(document.getElementById("chart"), "CHART 2.00");
+    draw(document.querySelector("#signature canvas"), "SIGNED 8181");
+    draw(document.getElementById("pad"), "SECRET 4417");
+  </script>
+  <script type="module" src="./fixture.ts"></script>
+</body></html>

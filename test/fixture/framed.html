@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Framed</title><link rel="stylesheet" href="./page.css"></head>
+<body>
+  <p class="row" id="public">PUBLIC CONTROL WORDS</p>
+  <div class="row" id="card">
+    <p id="price">PRICE 2.00 EACH</p>
+    <div id="wrapped" data-luh="hide"><iframe class="small" src="./frame.html" title="Card field"></iframe></div>
+  </div>
+  <div class="frames">
+    <iframe id="same" src="./frame.html" title="Same origin"></iframe>
+    <iframe id="plain" src="./frame.html" title="Default size"></iframe>
+    <iframe id="inline" title="Inline" srcdoc="<body style='margin:0;font:22px Arial'><p data-luh='blur'>INLINE 6161 SECRET</p><input value='TYPED 3131'></body>"></iframe>
+  </div>
+  <p class="row" id="after">AFTER FRAME WORDS</p>
+  <script type="module" src="./fixture.ts"></script>
+</body></html>

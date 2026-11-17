@@ -1,7 +1,7 @@
 // Real-browser proof that private areas are unreadable in the picture Luh
 // sends: Chromium draws the page, and the sent PNG is checked twice, by its
-// pixels and by OCR (tesseract, when installed). A public line on the same
-// page must stay readable, so an empty OCR result can never pass by accident.
+// pixels and by OCR (tesseract, required). A public line on the same page
+// must stay readable, so an empty OCR result can never pass by accident.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -14,16 +14,14 @@ let server: ViteDevServer;
 let browser: Browser;
 let base: string;
 const folder = mkdtempSync(join(tmpdir(), "luh-privacy-"));
-const hasTesseract = (() => {
-  try {
-    execFileSync("tesseract", ["--version"], { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
-  }
-})();
 
 beforeAll(async () => {
+  // Without OCR the word checks would prove nothing, so a missing tesseract fails the run.
+  try {
+    execFileSync("tesseract", ["--version"], { stdio: "ignore" });
+  } catch {
+    throw new Error("tesseract is required for the browser tests: install it (Arch: tesseract tesseract-data-eng; Debian: tesseract-ocr)");
+  }
   server = await createServer({
     root: join(import.meta.dirname, "fixture"),
     configFile: false,
@@ -83,6 +81,28 @@ function ink(page: Page, png: string, ids: string[]) {
   );
 }
 
+/** The colour drawn at the middle of each side of each element's border box, inset half a pixel. */
+function borders(page: Page, png: string, ids: string[]) {
+  return page.evaluate(
+    async ({ png, ids }) => {
+      const image = await createImageBitmap(await (await fetch(`data:image/png;base64,${png}`)).blob());
+      const scale = image.width / window.innerWidth;
+      const canvas = new OffscreenCanvas(image.width, image.height);
+      const context = canvas.getContext("2d")!;
+      context.drawImage(image, 0, 0);
+      const at = (x: number, y: number) => [...context.getImageData(Math.floor(x * scale), Math.floor(y * scale), 1, 1).data.slice(0, 3)];
+      return Object.fromEntries(
+        ids.map((id) => {
+          const box = document.getElementById(id)!.getBoundingClientRect();
+          const middle = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+          return [id, [at(box.left + 0.5, middle.y), at(box.right - 0.5, middle.y), at(middle.x, box.top + 0.5), at(middle.x, box.bottom - 0.5)]];
+        }),
+      );
+    },
+    { png, ids },
+  );
+}
+
 function ocr(png: string, name: string) {
   const file = join(folder, `${name}.png`);
   writeFileSync(file, Buffer.from(png, "base64"));
@@ -105,13 +125,11 @@ describe("private areas in the sent screenshot", () => {
     for (const id of ["marked", "hidden", "email", "phone", "clip"]) expect(dark[id], id).toBe(0);
     // Cut-off words are covered only where they are drawn: the words beside stay sharp.
     expect(dark.beside).toBeGreaterThan(100);
-    if (hasTesseract) {
-      const read = ocr(sent.screenshot!, "marked");
-      console.info(`OCR of ${read.file}:\n${read.words}`);
-      expect(read.squashed).toContain("PUBLICCONTROLWORDS");
-      expect(read.squashed).toContain("BESIDE");
-      for (const secret of SECRETS) expect(read.squashed, secret).not.toContain(secret);
-    }
+    const read = ocr(sent.screenshot!, "marked");
+    console.info(`OCR of ${read.file}:\n${read.words}`);
+    expect(read.squashed).toContain("PUBLICCONTROLWORDS");
+    expect(read.squashed).toContain("BESIDE");
+    for (const secret of SECRETS) expect(read.squashed, secret).not.toContain(secret);
     await page.close();
   }, 60_000);
 
@@ -121,11 +139,66 @@ describe("private areas in the sent screenshot", () => {
     expect(sent.covered).toContain("whole screenshot is blurred");
     const dark = await ink(page, sent.screenshot!, ["public", "marked"]);
     expect(dark.public).toBe(0);
-    if (hasTesseract) {
-      const read = ocr(sent.screenshot!, "blurred");
-      console.info(`OCR of ${read.file}:\n${read.words}`);
-      for (const secret of ["PUBLIC", "CONTROL", ...SECRETS]) expect(read.squashed, secret).not.toContain(secret);
-    }
+    const read = ocr(sent.screenshot!, "blurred");
+    console.info(`OCR of ${read.file}:\n${read.words}`);
+    for (const secret of ["PUBLIC", "CONTROL", ...SECRETS]) expect(read.squashed, secret).not.toContain(secret);
+    await page.close();
+  }, 60_000);
+
+  it("keeps public words beside same-origin frames readable and draws no word from inside a frame", async () => {
+    const page = await openPage("framed.html");
+    // Both frames are readable from the page, so the screenshot library walks into them.
+    expect(await page.evaluate(() => [...document.querySelectorAll("iframe")].every((frame) => frame.contentDocument?.body?.textContent?.trim()))).toBe(true);
+    const sent = await send(page);
+    expect(sent.screenshot).toBeTruthy();
+    const read = ocr(sent.screenshot!, "framed");
+    console.info(`OCR of ${read.file}:\n${read.words}`);
+    expect(read.squashed).toContain("PUBLICCONTROLWORDS");
+    expect(read.squashed).toContain("PRICE200EACH");
+    expect(read.squashed).toContain("AFTERFRAMEWORDS");
+    for (const secret of ["SALARY", "FRAMED", "7171", "HIDDEN", "5151", "MARY", "4040404", "INLINE", "6161", "TYPED", "3131"])
+      expect(read.squashed, secret).not.toContain(secret);
+    const dark = await ink(page, sent.screenshot!, ["public", "price", "after", "wrapped", "same", "plain", "inline"]);
+    for (const id of ["public", "price", "after"]) expect(dark[id], id).toBeGreaterThan(200);
+    // Frames are drawn blank, as a cross-origin frame is: no word from inside one, private or not.
+    for (const id of ["wrapped", "same", "plain", "inline"]) expect(dark[id], id).toBe(0);
+    // Each blank frame keeps the frame's own box, its default size and inset border included: nothing around it moves.
+    const lines = await borders(page, sent.screenshot!, ["same", "plain", "inline"]);
+    for (const [id, sides] of Object.entries(lines))
+      for (const side of sides) expect(Math.min(...side), `${id} border`).toBeLessThan(200);
+    await page.close();
+  }, 60_000);
+
+  it("draws public canvases and video posters, and covers private ones", async () => {
+    const page = await openPage("media.html");
+    // The screenshot library clones a drawn canvas and a poster video as pictures.
+    await page.waitForFunction(() => [...document.querySelectorAll("video")].every((video) => video.poster && !video.currentSrc));
+    const sent = await send(page);
+    expect(sent.screenshot).toBeTruthy();
+    expect(sent.covered).toContain("4 private areas covered");
+    const read = ocr(sent.screenshot!, "media");
+    console.info(`OCR of ${read.file}:\n${read.words}`);
+    for (const words of ["PUBLICCONTROLWORDS", "CHART200", "POSTERWORDS", "AFTERMEDIAWORDS"]) expect(read.squashed, words).toContain(words);
+    for (const secret of ["SIGNED", "8181", "SECRET", "4417", "CLIP", "6262", "JANE"]) expect(read.squashed, secret).not.toContain(secret);
+    const dark = await ink(page, sent.screenshot!, ["public", "chart", "clip", "after", "signature", "pad", "hidden", "blurred"]);
+    for (const id of ["public", "chart", "clip", "after"]) expect(dark[id], id).toBeGreaterThan(200);
+    for (const id of ["signature", "pad", "hidden", "blurred"]) expect(dark[id], id).toBe(0);
+    await page.close();
+  }, 60_000);
+
+  it("takes the picture on a page with forms, drawings, media, components and pictures", async () => {
+    const page = await openPage("realistic.html");
+    await page.waitForFunction(() => customElements.get("x-card") && [...document.images].every((image) => image.complete));
+    const sent = await send(page);
+    expect(sent.screenshot).toBeTruthy();
+    const read = ocr(sent.screenshot!, "realistic");
+    console.info(`OCR of ${read.file}:\n${read.words}`);
+    for (const words of ["PUBLICCONTROLWORDS", "AFTERPAGEWORDS", "SHADOWWORDS", "SLOTTEDWORDS"]) expect(read.squashed, words).toContain(words);
+    for (const secret of ["BLURRED", "1212", "HUNTER", "FRAMED", "7171"]) expect(read.squashed, secret).not.toContain(secret);
+    // A video with nothing to draw keeps its box: the words beside it stay where they are.
+    const dark = await ink(page, sent.screenshot!, ["public", "after", "beside-video"]);
+    for (const id of ["public", "after"]) expect(dark[id], id).toBeGreaterThan(200);
+    expect(dark["beside-video"]).toBeGreaterThan(50);
     await page.close();
   }, 60_000);
 
@@ -146,10 +219,8 @@ describe("private areas in the sent screenshot", () => {
     const sent = await send(page);
     const dark = await ink(page, sent.screenshot!, ["marked", "hidden", "email"]);
     for (const id of ["marked", "hidden", "email"]) expect(dark[id], id).toBeGreaterThan(200);
-    if (hasTesseract) {
-      const read = ocr(sent.screenshot!, "control");
-      expect(read.squashed).toContain("SALARY85000");
-    }
+    const read = ocr(sent.screenshot!, "control");
+    expect(read.squashed).toContain("SALARY85000");
     await page.close();
   }, 60_000);
 });
